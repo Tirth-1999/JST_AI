@@ -2,8 +2,12 @@ import axios from 'axios';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import type { ConversionMetrics, ConversionResponse } from './types';
+import authService from './auth';
 
 const API_URL = 'http://localhost:8000';
+
+// Google Client ID - Replace with your actual client ID
+const GOOGLE_CLIENT_ID = '789204737622-np3cmr6pom7948uvhlc99uhud36mpgol.apps.googleusercontent.com';
 
 // DOM Elements
 const jsonInput = document.getElementById('jsonInput') as HTMLTextAreaElement;
@@ -731,9 +735,36 @@ function showSuccessAnimation(): void {
     }, 2000);
 }
 
+// ============================================
+// AUTH INTEGRATION
+// ============================================
+
+// Initialize auth service
+async function initAuth() {
+    // Initialize Google Sign-In
+    authService.initGoogleSignIn(GOOGLE_CLIENT_ID);
+    
+    // Verify existing token if present
+    if (authService.isAuthenticated()) {
+        await authService.verifyToken();
+    }
+    
+    // Update UI
+    authService.updateUI();
+}
+
+// Setup logout button
+const logoutBtn = document.getElementById('logoutBtn') as HTMLButtonElement;
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+        authService.logout();
+    });
+}
+
 // Initialize
 initTheme();
 updateLineNumbers(jsonLineNumbers, 1);
+initAuth();
 updateLineNumbers(toonLineNumbers, 1);
 copyOutputBtn.disabled = true;
 downloadBtn.disabled = true;

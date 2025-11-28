@@ -1,6 +1,59 @@
+# Dependencies
 node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+
+# Build outputs
 dist/
-.DS_Store
-*.log
-.vite
+build/
+*.egg-info/
+
+# Environment variables
+.env
 backend/.env
+
+# Database
+backend/*.db
+backend/*.db-journal
+*.sqlite
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+.vite/
+
+# Google OAuth credentials
+client_secret_*.json
+credentials.json
+
+# Documentation (optional)
+CLAUDE.md
+AUTH_IMPLEMENTATION_SUMMARY.md
+GOOGLE_AUTH_SETUP.md
+USER_DATA_STORAGE.md
+setup-auth.sh

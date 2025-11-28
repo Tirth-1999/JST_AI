@@ -1,16 +1,25 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, EmailStr
+from fastapi.responses import RedirectResponse
+from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import Dict, Any, Optional
+from sqlalchemy.orm import Session
 import json
 import os
 from dotenv import load_dotenv
 import resend
+import httpx
 
 from toon_converter import json_to_toon, calculate_metrics
+from database import engine, get_db
+import models
+from auth import oauth, create_access_token, get_current_user, get_or_create_user
 
 # Load environment variables
 load_dotenv()
+
+# Create database tables
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="JST AI - JSON to TOON Converter API")
 
@@ -51,6 +60,135 @@ class ContactResponse(BaseModel):
     success: bool
     message: str
 
+
+class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    email: str
+    name: str
+    picture: Optional[str] = None
+    created_at: str
+
+
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: str
+    user: UserResponse
+
+
+# ============================================
+# AUTH ENDPOINTS
+# ============================================
+
+@app.get("/auth/google/login")
+async def google_login(request: Request):
+    """Initiate Google OAuth login"""
+    redirect_uri = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:5173/auth/callback")
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+
+@app.get("/auth/google/callback")
+async def google_callback(request: Request, db: Session = Depends(get_db)):
+    """Handle Google OAuth callback"""
+    try:
+        token = await oauth.google.authorize_access_token(request)
+        user_info = token.get('userinfo')
+        
+        if not user_info:
+            raise HTTPException(status_code=400, detail="Failed to get user info from Google")
+        
+        # Get or create user
+        user = get_or_create_user(
+            db=db,
+            google_id=user_info['sub'],
+            email=user_info['email'],
+            name=user_info.get('name', ''),
+            picture=user_info.get('picture', '')
+        )
+        
+        # Create JWT token
+        access_token = create_access_token(data={"sub": user.id})
+        
+        # Redirect to frontend with token
+        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+        return RedirectResponse(url=f"{frontend_url}/auth/success?token={access_token}")
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Authentication failed: {str(e)}")
+
+
+@app.post("/auth/google/verify")
+async def google_verify(request: Request, db: Session = Depends(get_db)):
+    """Verify Google ID token from frontend"""
+    try:
+        body = await request.json()
+        id_token = body.get("credential")
+        
+        if not id_token:
+            raise HTTPException(status_code=400, detail="No credential provided")
+        
+        # Verify the Google ID token
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"https://oauth2.googleapis.com/tokeninfo?id_token={id_token}"
+            )
+            
+            if response.status_code != 200:
+                raise HTTPException(status_code=400, detail="Invalid token")
+            
+            user_info = response.json()
+            
+            # Verify the token is for our app
+            client_id = os.getenv("GOOGLE_CLIENT_ID")
+            if user_info.get('aud') != client_id:
+                raise HTTPException(status_code=400, detail="Token not for this application")
+            
+            # Get or create user
+            user = get_or_create_user(
+                db=db,
+                google_id=user_info['sub'],
+                email=user_info['email'],
+                name=user_info.get('name', ''),
+                picture=user_info.get('picture', '')
+            )
+            
+            # Create JWT token
+            access_token = create_access_token(data={"sub": user.id})
+            
+            return AuthResponse(
+                access_token=access_token,
+                token_type="bearer",
+                user=UserResponse(
+                    id=user.id,
+                    email=user.email,
+                    name=user.name,
+                    picture=user.picture,
+                    created_at=user.created_at.isoformat()
+                )
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Authentication failed: {str(e)}")
+
+
+@app.get("/auth/me", response_model=UserResponse)
+async def get_me(current_user: models.User = Depends(get_current_user)):
+    """Get current user info"""
+    return UserResponse(
+        id=current_user.id,
+        email=current_user.email,
+        name=current_user.name,
+        picture=current_user.picture,
+        created_at=current_user.created_at.isoformat()
+    )
+
+
+# ============================================
+# MAIN ENDPOINTS
+# ============================================
 
 @app.get("/")
 async def root():
