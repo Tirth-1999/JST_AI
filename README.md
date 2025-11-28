@@ -179,7 +179,3 @@ JST_AI/
 - Vite provides instant HMR
 - Animated metrics use `requestAnimationFrame` for smooth 60fps
 - CORS enabled for local development
-
-## License
-
-MIT
