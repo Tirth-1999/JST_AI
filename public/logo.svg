@@ -1,0 +1,29 @@
+<svg width="36" height="36" viewBox="0 0 325 325" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#60a5fa;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#34d399;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Left curly brace { -->
+  <path d="M 110 60 Q 80 60 80 90 L 80 130 Q 80 145 65 145 Q 80 145 80 160 L 80 235 Q 80 265 110 265" 
+        stroke="url(#gradient)" stroke-width="12" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Right arrow > -->
+  <path d="M 150 120 L 195 162.5 L 150 205" 
+        stroke="url(#gradient)" stroke-width="12" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Left arrow < -->
+  <path d="M 175 120 L 130 162.5 L 175 205" 
+        stroke="url(#gradient)" stroke-width="12" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Right curly brace with database layers } -->
+  <path d="M 215 60 Q 245 60 245 90 L 245 130 Q 245 145 260 145 Q 245 145 245 160 L 245 235 Q 245 265 215 265" 
+        stroke="url(#gradient)" stroke-width="12" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Database cylinder layers inside right brace -->
+  <ellipse cx="230" cy="145" rx="12" ry="4" stroke="url(#gradient)" stroke-width="3" fill="none"/>
+  <ellipse cx="230" cy="155" rx="12" ry="4" stroke="url(#gradient)" stroke-width="3" fill="none"/>
+  <ellipse cx="230" cy="165" rx="12" ry="4" stroke="url(#gradient)" stroke-width="3" fill="none"/>
+</svg>
