@@ -151,9 +151,10 @@ body {
 .header-btn {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    font-size: 13px;
+    gap: 8px;
+    padding: 10px 16px;
+    min-height: 40px;
+    font-size: 14px;
     font-weight: 500;
     color: var(--text-secondary);
     background: rgba(45, 45, 48, 0.6);
@@ -166,8 +167,8 @@ body {
 }
 
 .header-btn svg {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     flex-shrink: 0;
 }
 
@@ -192,7 +193,8 @@ body {
 .theme-toggle {
     width: auto;
     height: auto;
-    padding: 8px 14px;
+    padding: 10px 16px;
+    min-height: 40px;
     border-radius: 6px;
     border: 1px solid rgba(62, 62, 66, 0.5);
     background: rgba(45, 45, 48, 0.6);
@@ -207,8 +209,8 @@ body {
 }
 
 .theme-toggle svg {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
 }
 
 .theme-toggle:hover {
@@ -768,14 +770,14 @@ kbd {
     /* Mobile: Hide text in header buttons, show only icons */
     .header-btn {
         padding: 8px;
-        min-width: 36px;
-        height: 36px;
+        min-width: 40px;
+        min-height: 40px;
         justify-content: center;
     }
 
     .header-btn svg {
-        width: 18px;
-        height: 18px;
+        width: 20px;
+        height: 20px;
     }
 
     /* Hide button text on mobile */
@@ -785,14 +787,14 @@ kbd {
     }
 
     .theme-toggle {
-        width: 36px;
-        height: 36px;
+        width: 40px;
+        min-height: 40px;
         padding: 8px;
     }
 
     .theme-toggle svg {
-        width: 18px;
-        height: 18px;
+        width: 20px;
+        height: 20px;
     }
 
     /* Mobile: Compact user profile */
@@ -815,8 +817,9 @@ kbd {
     }
 
     .logout-btn {
-        padding: 4px 6px !important;
-        font-size: 10px !important;
+        padding: 8px 12px !important;
+        min-height: 40px !important;
+        font-size: 12px !important;
     }
 
     /* Mobile: Smaller Google Sign-In button */
@@ -1389,8 +1392,9 @@ kbd {
 }
 
 .logout-btn {
-    padding: 6px 12px !important;
-    font-size: 12px !important;
+    padding: 10px 16px !important;
+    min-height: 40px !important;
+    font-size: 14px !important;
     background: rgba(239, 68, 68, 0.1) !important;
     border-color: rgba(239, 68, 68, 0.5) !important;
     color: #ef4444 !important;
