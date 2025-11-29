@@ -49,6 +49,9 @@ let isTableView = false;
 const jsonLineNumbers = document.getElementById('jsonLineNumbers') as HTMLDivElement;
 const toonLineNumbers = document.getElementById('toonLineNumbers') as HTMLDivElement;
 
+// Mobile redo button
+const redoBtn = document.getElementById('redoBtn') as HTMLButtonElement;
+
 // Metric elements
 const jsonTokensEl = document.getElementById('jsonTokens') as HTMLSpanElement;
 const toonTokensEl = document.getElementById('toonTokens') as HTMLSpanElement;
@@ -56,6 +59,34 @@ const tokensSavedEl = document.getElementById('tokensSaved') as HTMLSpanElement;
 const reductionPercentEl = document.getElementById('reductionPercent') as HTMLSpanElement;
 
 let currentFileName = '';
+
+// Mobile conversion state management
+function isMobileView(): boolean {
+    return window.innerWidth <= 1024;
+}
+
+function showMobileConversionComplete(): void {
+    if (isMobileView()) {
+        document.body.classList.add('conversion-complete');
+        
+        // Smooth scroll to TOON output
+        const toonPanel = document.querySelector('.editor-panel:nth-child(2)') as HTMLElement;
+        if (toonPanel) {
+            setTimeout(() => {
+                toonPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+    }
+}
+
+function resetMobileView(): void {
+    if (isMobileView()) {
+        document.body.classList.remove('conversion-complete');
+        
+        // Scroll back to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
 
 // Theme Management
 function initTheme(): void {
@@ -260,6 +291,14 @@ clearInputBtn.addEventListener('click', handleClear);
 copyOutputBtn.addEventListener('click', handleCopy);
 themeToggle.addEventListener('click', toggleTheme);
 
+// Mobile redo button
+if (redoBtn) {
+    redoBtn.addEventListener('click', () => {
+        resetMobileView();
+        jsonInput.focus();
+    });
+}
+
 // Slide panel event listeners
 faqToggle.addEventListener('click', () => openPanel(faqPanel));
 contactToggle.addEventListener('click', () => openPanel(contactPanel));
@@ -329,6 +368,9 @@ async function handleConvert(): Promise<void> {
         animateMetrics(metrics);
         copyOutputBtn.disabled = false;
         downloadBtn.disabled = false;
+
+        // Show mobile conversion complete state
+        showMobileConversionComplete();
 
     } catch (error) {
         let errorMsg = 'An error occurred during conversion';
@@ -573,6 +615,9 @@ function handleClear(): void {
     tableViewContainer.style.display = 'none';
     editorWrapper.style.display = 'flex';
 
+    // Reset mobile view
+    resetMobileView();
+
     jsonInput.focus();
 }
 
@@ -760,6 +805,14 @@ if (logoutBtn) {
         authService.logout();
     });
 }
+
+// Handle window resize to reset mobile state if needed
+window.addEventListener('resize', () => {
+    // If window is resized to desktop view while in conversion-complete state
+    if (!isMobileView() && document.body.classList.contains('conversion-complete')) {
+        document.body.classList.remove('conversion-complete');
+    }
+});
 
 // Initialize
 initTheme();

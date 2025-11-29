@@ -263,6 +263,93 @@ body {
     max-height: 100%;
 }
 
+/* When grid stacks (one column), switch to mobile mode */
+@media (max-width: 1024px) {
+    .editor-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    /* Hide TOON output initially on stacked layout */
+    .editor-panel:nth-child(2) {
+        display: none;
+    }
+
+    /* Show TOON output after conversion */
+    body.conversion-complete .editor-panel:nth-child(1) {
+        display: none;
+    }
+
+    body.conversion-complete .editor-panel:nth-child(2) {
+        display: block;
+    }
+
+    /* Action bar changes for single-column layout */
+    body.conversion-complete .action-bar {
+        flex-direction: row;
+        justify-content: center;
+        gap: 12px;
+    }
+
+    body.conversion-complete .btn-primary {
+        display: none;
+    }
+
+    body.conversion-complete .action-info {
+        display: none;
+    }
+
+    /* Show redo button on single-column layout after conversion */
+    body.conversion-complete .btn-redo-mobile {
+        display: inline-flex;
+    }
+
+    /* Metrics scroll into view */
+    body.conversion-complete .metrics-container {
+        margin-top: 16px;
+    }
+
+    /* Make output panel buttons more prominent in single-column mode */
+    body.conversion-complete .panel-actions {
+        gap: 8px;
+    }
+
+    body.conversion-complete .btn-ghost {
+        padding: 8px 16px;
+        font-size: 13px;
+        height: auto;
+    }
+}
+
+/* Redo button - hidden by default, shown only in single-column after conversion */
+.btn-redo-mobile {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffffff;
+    background: var(--accent-primary);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-redo-mobile:hover:not(:disabled) {
+    background: var(--accent-hover);
+}
+
+.btn-redo-mobile:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-redo-mobile .btn-icon {
+    flex-shrink: 0;
+}
+
 .editor-panel {
     display: flex;
     flex-direction: column;
