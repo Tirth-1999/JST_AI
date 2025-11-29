@@ -259,6 +259,12 @@ function showFileInfo(file: File, format: string): void {
 
 // Download Handler
 downloadBtn.addEventListener('click', () => {
+    // Check if user is authenticated
+    if (!authService.isAuthenticated()) {
+        showError('Please sign in to download files');
+        return;
+    }
+
     const content = toonOutput.textContent;
 
     if (!content || content === 'Your optimized TOON output will appear here...' || content === 'Error occurred during conversion') {
@@ -367,7 +373,13 @@ async function handleConvert(): Promise<void> {
 
         animateMetrics(metrics);
         copyOutputBtn.disabled = false;
-        downloadBtn.disabled = false;
+        
+        // Only enable download button if user is authenticated
+        if (authService.isAuthenticated()) {
+            downloadBtn.disabled = false;
+        } else {
+            downloadBtn.disabled = true;
+        }
 
         // Show mobile conversion complete state
         showMobileConversionComplete();

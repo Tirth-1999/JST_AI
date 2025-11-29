@@ -375,6 +375,67 @@ body {
 .panel-actions {
     display: flex;
     gap: 6px;
+    position: relative;
+}
+
+/* Tooltip for disabled download button */
+.btn-ghost.btn-download[disabled]:not([data-authenticated="true"]) {
+    cursor: not-allowed;
+    position: relative;
+    opacity: 0.6;
+}
+
+/* Add a small locked icon indicator */
+.btn-ghost.btn-download[disabled]:not([data-authenticated="true"])::after {
+    content: '🔒';
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    font-size: 10px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.8;
+}
+
+/* Subtle tooltip on hover */
+.btn-ghost.btn-download[disabled]:not([data-authenticated="true"]):hover::before {
+    content: 'Sign in to download';
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 99999;
+    animation: fadeIn 0.2s ease;
+    pointer-events: none;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.panel-header {
+    position: relative;
+    z-index: 1;
 }
 
 .file-info {
@@ -1438,9 +1499,87 @@ kbd {
     gap: 12px;
 }
 
+/* Google Sign-In Button */
+.google-signin-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    min-height: 40px;
+    font-size: 14px;
+    font-weight: 500;
+    border: 1px solid rgba(62, 62, 66, 0.5);
+    border-radius: 8px;
+    background: rgba(45, 45, 48, 0.6);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.google-signin-btn:hover {
+    background: rgba(55, 55, 58, 0.8);
+    border-color: rgba(72, 72, 76, 0.7);
+    transform: translateY(-1px);
+}
+
+.google-signin-btn:active {
+    transform: translateY(0);
+}
+
+.google-icon {
+    flex-shrink: 0;
+}
+
+:root[data-theme="light"] .google-signin-btn {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(204, 204, 204, 0.5);
+}
+
+:root[data-theme="light"] .google-signin-btn:hover {
+    background: rgba(245, 245, 245, 1);
+    border-color: rgba(180, 180, 180, 0.7);
+}
+
 .google-signin-container {
     display: flex;
     align-items: center;
+}
+
+/* Style the Google Sign-In button container to match theme */
+.google-signin-container iframe {
+    /* Make the white background transparent */
+    background: transparent !important;
+}
+
+/* Override Google button styles to match theme */
+.google-signin-container > div {
+    background: transparent !important;
+}
+
+:root[data-theme="dark"] .google-signin-container {
+    /* Dark theme styling for Google button */
+    background: rgba(45, 45, 48, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(62, 62, 66, 0.5);
+    border-radius: 8px;
+    padding: 2px;
+}
+
+:root[data-theme="dark"] .google-signin-container iframe {
+    /* Blend with dark theme */
+    opacity: 0.95;
+    mix-blend-mode: lighten;
+}
+
+:root[data-theme="light"] .google-signin-container {
+    /* Light theme styling */
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(204, 204, 204, 0.5);
+    border-radius: 8px;
+    padding: 2px;
 }
 
 .user-profile {

@@ -11,24 +11,30 @@ A modern full-stack web application that converts JSON to TOON (Token Optimized 
 ## ✨ Features
 
 ### Core Functionality
-- **Real-time Conversion**: Instantly convert JSON to optimized TOON format
-- **Multiple Input Formats**: Support for JSON, CSV, and XLSX file uploads
-- **Animated Metrics**: Smooth counter animations showing token savings
-- **One-Click Actions**: Copy, download, and clear functionality
-- **Responsive Design**: Optimized for desktop, tablet, and mobile devices
+- **Real-time Conversion**: Instantly convert JSON to optimized TOON format via Python backend
+- **Multiple Input Formats**: Support for JSON, CSV, and XLSX file uploads with auto-detection
+- **Animated Metrics**: Smooth counter animations showing token savings in real-time
+- **One-Click Actions**: Copy results (always available), download as .txt files (requires sign-in)
+- **Syntax Highlighting**: Color-coded TOON output for better readability
+- **Line Numbers**: Synchronized line numbers for both input and output editors
 
 ### Authentication & User Management
 - **Google OAuth 2.0**: Secure sign-in with Google accounts
 - **User Profiles**: Avatar and name display with session management
 - **JWT Tokens**: Secure authentication with 7-day token expiration
-- **SQLite Database**: Local user data storage
+- **SQLite Database**: Local user data storage with User and Conversion tables
+- **Feature Gating**: Download functionality requires authentication, copy is always available
+- **Session Management**: Automatic clearing of results on login/logout for security
 
-### UI/UX
-- **Modern Design**: Glassmorphism effects and smooth animations
+### UI/UX Excellence
+- **Modern Design**: Glassmorphism effects, gradient buttons, and smooth animations
 - **Dark/Light Theme**: Persistent theme toggle with system preference detection
-- **Slide Panels**: FAQ and Contact sections with smooth animations
-- **Toast Notifications**: Success and error feedback
-- **Mobile Optimized**: Icon-only navigation on small screens
+- **Responsive Breakpoints**: Optimized layouts for desktop (>1024px), tablet, and mobile (≤1024px)
+- **Single-Column Mobile Mode**: Streamlined experience with step-by-step conversion flow
+- **Slide Panels**: Animated FAQ and Contact sections accessible from header
+- **Toast Notifications**: Success and error feedback with auto-dismiss
+- **Visual Indicators**: Lock icon on disabled download button with hover tooltip
+- **Mobile Optimized**: Icon-only header navigation, redo button for easy re-conversion
 
 ## 🚀 Quick Start
 
@@ -139,12 +145,25 @@ The built files will be in the `dist/` directory.
 
 ## 📖 Usage
 
-1. **Sign in** with your Google account (optional, for saving history)
-2. **Paste JSON** into the left editor or **upload a file** (JSON/CSV/XLSX)
-3. Click **"Convert to TOON"** (or press Ctrl/Cmd + Enter)
-4. View the optimized output and metrics
-5. **Copy** or **Download** the result
-6. View **FAQ** for more information or **Contact** for support
+### For Everyone (No Sign-In Required)
+1. **Paste JSON** into the left editor or **upload a file** (JSON/CSV/XLSX)
+2. Click **"Convert to TOON"** (or press Ctrl/Cmd + Enter)
+3. View the optimized output with real-time metrics
+4. **Copy** the result to clipboard
+
+### With Google Sign-In (Extra Features)
+1. Click **"Sign in with Google"** in the header
+2. After signing in, convert your JSON as usual
+3. Use the **Download** button to save results as `.txt` files
+4. Your session is secure with JWT tokens
+
+### Mobile Experience (≤1024px screens)
+1. See only the JSON input initially
+2. After conversion, view TOON output in full screen
+3. Use the **"Redo Conversion"** button to return to input
+4. Scroll down to see metrics
+
+**Note**: Results are automatically cleared when you sign in or out for your security.
 
 ## 🎯 What is TOON?
 

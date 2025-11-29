@@ -47,16 +47,25 @@ class AuthService {
             auto_select: false,
         });
 
-        // @ts-ignore
-        google.accounts.id.renderButton(
-            document.getElementById('googleSignInBtn'),
-            {
-                theme: 'outline',
-                size: 'large',
-                text: 'signin_with',
-                shape: 'rectangular',
-            }
-        );
+        // Set up custom button click handler
+        this.setupCustomButton();
+    }
+
+    // Setup custom Google Sign-In button
+    setupCustomButton() {
+        const customButton = document.getElementById('googleSignInBtn');
+        if (!customButton) return;
+
+        customButton.addEventListener('click', () => {
+            // @ts-ignore
+            google.accounts.id.prompt();
+        });
+    }
+
+    // Render or re-render Google Sign-In button with current theme
+    renderGoogleButton() {
+        // No longer needed - using custom button
+        // Keeping method for compatibility
     }
 
     // Handle Google Sign-In callback
@@ -75,6 +84,9 @@ class AuthService {
 
             // Update UI
             this.updateUI();
+
+            // Clear conversion results on login
+            this.clearConversionResults();
 
             // Show success notification
             this.showNotification('Successfully signed in!', 'success');
@@ -96,6 +108,9 @@ class AuthService {
             // @ts-ignore
             google.accounts.id.disableAutoSelect();
         }
+        
+        // Clear conversion results on logout
+        this.clearConversionResults();
         
         this.updateUI();
         this.showNotification('Logged out successfully', 'success');
@@ -131,8 +146,24 @@ class AuthService {
             if (userName) userName.textContent = this.user.name;
         } else {
             // Show sign-in button, hide profile
-            if (googleSignInBtn) googleSignInBtn.style.display = 'block';
+            if (googleSignInBtn) googleSignInBtn.style.display = 'flex';
             if (userProfile) userProfile.style.display = 'none';
+        }
+
+        // Update download button visibility
+        this.updateDownloadButtonVisibility();
+    }
+
+    // Update download button visibility based on auth state
+    updateDownloadButtonVisibility() {
+        const downloadBtn = document.getElementById('downloadBtn') as HTMLButtonElement;
+        
+        if (downloadBtn) {
+            if (this.isAuthenticated()) {
+                downloadBtn.setAttribute('data-authenticated', 'true');
+            } else {
+                downloadBtn.removeAttribute('data-authenticated');
+            }
         }
     }
 
@@ -164,6 +195,53 @@ class AuthService {
                 Authorization: `Bearer ${this.token}`,
             },
         };
+    }
+
+    // Clear conversion results
+    clearConversionResults() {
+        const toonOutput = document.getElementById('toonOutput') as HTMLPreElement;
+        const copyOutputBtn = document.getElementById('copyOutput') as HTMLButtonElement;
+        const downloadBtn = document.getElementById('downloadBtn') as HTMLButtonElement;
+        const toonLineNumbers = document.getElementById('toonLineNumbers') as HTMLDivElement;
+        
+        if (toonOutput) {
+            toonOutput.textContent = 'Your optimized TOON output will appear here...';
+        }
+        
+        if (copyOutputBtn) {
+            copyOutputBtn.disabled = true;
+        }
+        
+        if (downloadBtn) {
+            downloadBtn.disabled = true;
+        }
+
+        // Reset line numbers
+        if (toonLineNumbers) {
+            toonLineNumbers.textContent = '1';
+        }
+
+        // Reset metrics to initial state
+        this.resetMetrics();
+
+        // Reset mobile view if in conversion-complete state
+        if (document.body.classList.contains('conversion-complete')) {
+            document.body.classList.remove('conversion-complete');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+
+    // Reset metrics to zero
+    resetMetrics() {
+        const jsonTokensEl = document.getElementById('jsonTokens');
+        const toonTokensEl = document.getElementById('toonTokens');
+        const tokensSavedEl = document.getElementById('tokensSaved');
+        const reductionPercentEl = document.getElementById('reductionPercent');
+
+        if (jsonTokensEl) jsonTokensEl.textContent = '0';
+        if (toonTokensEl) toonTokensEl.textContent = '0';
+        if (tokensSavedEl) tokensSavedEl.textContent = '0';
+        if (reductionPercentEl) reductionPercentEl.textContent = '0%';
     }
 
     // Show notification
