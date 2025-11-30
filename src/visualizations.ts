@@ -1,5 +1,15 @@
 // Visualizations Module
-import Plotly from 'plotly.js-dist-min';
+// Plotly is dynamically imported when needed to reduce initial bundle size
+
+// Cache the Plotly import to avoid reloading
+let plotlyModule: any = null;
+
+async function getPlotly() {
+    if (!plotlyModule) {
+        plotlyModule = await import('plotly.js-basic-dist-min');
+    }
+    return plotlyModule.default;
+}
 
 interface ChartData {
     type: string;
@@ -209,7 +219,10 @@ export class VisualizationManager {
         const chartId = `chart-${index}`;
         const chartElement = document.getElementById(chartId);
         if (chartElement) {
-            Plotly.Plots.resize(chartElement);
+            // Dynamically load Plotly only when needed
+            getPlotly().then(Plotly => {
+                Plotly.Plots.resize(chartElement);
+            });
         }
     }
 
@@ -339,8 +352,9 @@ export class VisualizationManager {
                     modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d', 'toImage'],
                     modeBarButtonsToAdd: isMobile ? [] : [{
                         name: 'Download as PNG',
-                        icon: Plotly.Icons.camera,
-                        click: function(gd: any) {
+                        icon: undefined, // Will be set after Plotly loads
+                        click: async function(gd: any) {
+                            const Plotly = await getPlotly();
                             Plotly.downloadImage(gd, {
                                 format: 'png',
                                 width: 1200,
@@ -351,6 +365,14 @@ export class VisualizationManager {
                     }]
                 };
 
+                // Dynamically load Plotly and render the chart
+                const Plotly = await getPlotly();
+                
+                // Update icon after Plotly loads
+                if (!isMobile && config.modeBarButtonsToAdd.length > 0) {
+                    config.modeBarButtonsToAdd[0].icon = Plotly.Icons.camera;
+                }
+                
                 await Plotly.newPlot(chartBody.id, execResult.data.data, layout, config);
             } else {
                 throw new Error('Invalid visualization data');

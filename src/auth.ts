@@ -20,6 +20,7 @@ class AuthService {
     private token: string | null = null;
     private user: User | null = null;
     private tokenClient: any = null;
+    // @ts-ignore - stored for potential future use
     private clientId: string = '';
 
     constructor() {

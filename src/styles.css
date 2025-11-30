@@ -819,11 +819,99 @@ body {
     color: var(--text-secondary);
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 .file-info svg {
     flex-shrink: 0;
+}
+
+.file-info-text {
+    flex: 0 0 auto;
+}
+
+.file-info-divider {
+    width: 1px;
+    height: 16px;
+    background: var(--border-color);
+    margin: 0 4px;
+}
+
+.txt-options-inline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.txt-inline-select {
+    background: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 3px 6px;
+    color: var(--text-primary);
+    font-size: 11px;
+    font-family: var(--font-mono);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.txt-inline-select:hover {
+    border-color: var(--accent-primary);
+}
+
+.txt-inline-select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.txt-inline-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    user-select: none;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.txt-inline-checkbox input[type="checkbox"] {
+    width: 13px;
+    height: 13px;
+    cursor: pointer;
+    accent-color: var(--accent-primary);
+}
+
+.btn-apply-inline {
+    padding: 3px 10px;
+    background: var(--accent-primary);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-apply-inline:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+}
+
+.btn-apply-inline:active {
+    transform: translateY(0);
+}
+
+.txt-preview-badge {
+    padding: 2px 6px;
+    background: rgba(234, 179, 8, 0.15);
+    border: 1px solid rgba(234, 179, 8, 0.3);
+    border-radius: 3px;
+    font-size: 10px;
+    color: #eab308;
+    font-weight: 600;
 }
 
 .panel-title {
@@ -4303,4 +4391,30 @@ kbd {
     .viz-dot.active {
         width: 20px;
     }
+
+    /* Mobile TXT options */
+    .file-info {
+        font-size: 10px;
+    }
+
+    .txt-options-inline {
+        width: 100%;
+        margin-left: 0;
+        gap: 6px;
+    }
+
+    .txt-inline-select {
+        font-size: 10px;
+        padding: 2px 4px;
+    }
+
+    .txt-inline-checkbox {
+        font-size: 10px;
+    }
+
+    .btn-apply-inline {
+        font-size: 10px;
+        padding: 2px 8px;
+    }
 }
+

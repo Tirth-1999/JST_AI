@@ -1,6 +1,5 @@
 import axios from 'axios';
 import Papa from 'papaparse';
-import * as XLSX from 'xlsx';
 import type { ConversionMetrics, ConversionResponse } from './types';
 import authService from './auth';
 import { VisualizationManager } from './visualizations';
@@ -63,6 +62,7 @@ const tokensSavedEl = document.getElementById('tokensSaved') as HTMLSpanElement;
 const reductionPercentEl = document.getElementById('reductionPercent') as HTMLSpanElement;
 
 let currentFileName = '';
+let currentTxtFileContent = ''; // Store TXT file content for reprocessing
 
 // Mobile conversion state management
 function isMobileView(): boolean {
@@ -152,7 +152,7 @@ fileInput.addEventListener('change', async (e: Event) => {
         hideError();
 
         let jsonData: string;
-        let detectedFormat: 'json' | 'csv' | 'xlsx' = 'json';
+        let detectedFormat: 'json' | 'csv' | 'xlsx' | 'xls' | 'txt' = 'json';
 
         if (fileExtension === 'json') {
             jsonData = await readFileAsText(file);
@@ -165,8 +165,14 @@ fileInput.addEventListener('change', async (e: Event) => {
         } else if (fileExtension === 'xlsx') {
             jsonData = await convertXLSXtoJSON(file);
             detectedFormat = 'xlsx';
+        } else if (fileExtension === 'xls') {
+            jsonData = await convertXLStoJSON(file);
+            detectedFormat = 'xls';
+        } else if (fileExtension === 'txt') {
+            jsonData = await convertTXTtoJSON(file);
+            detectedFormat = 'txt';
         } else {
-            throw new Error('Unsupported file type. Please upload JSON, CSV, or XLSX files.');
+            throw new Error('Unsupported file type. Please upload JSON, CSV, XLSX, XLS, or TXT files.');
         }
 
         jsonInput.value = jsonData;
@@ -225,40 +231,257 @@ async function convertCSVtoJSON(file: File): Promise<string> {
 }
 
 async function convertXLSXtoJSON(file: File): Promise<string> {
+    // Dynamic import - only loads ExcelJS when Excel files are uploaded
+    const ExcelJS = (await import('exceljs')).default;
     const arrayBuffer = await file.arrayBuffer();
-    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(arrayBuffer);
 
-    // Get the first sheet
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
+    // Get the first worksheet
+    const worksheet = workbook.worksheets[0];
+    
+    if (!worksheet) {
+        throw new Error('No worksheet found in the Excel file');
+    }
 
-    // Convert to JSON
-    const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-    // Remove __EMPTY columns
-    const cleanedData = jsonData.map((row: any) => {
-        const cleanedRow: any = {};
-        for (const key in row) {
-            if (!key.startsWith('__EMPTY')) {
-                cleanedRow[key] = row[key];
-            }
-        }
-        return cleanedRow;
+    // Get headers from first row
+    const headers: string[] = [];
+    const firstRow = worksheet.getRow(1);
+    firstRow.eachCell((cell, colNumber) => {
+        headers[colNumber - 1] = cell.text || `Column${colNumber}`;
     });
 
-    return JSON.stringify(cleanedData, null, 2);
+    // Convert rows to JSON
+    const jsonData: any[] = [];
+    worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return; // Skip header row
+        
+        const rowData: any = {};
+        row.eachCell((cell, colNumber) => {
+            const header = headers[colNumber - 1];
+            if (header && cell.value !== null && cell.value !== undefined) {
+                rowData[header] = cell.value;
+            }
+        });
+        
+        // Only add non-empty rows
+        if (Object.keys(rowData).length > 0) {
+            jsonData.push(rowData);
+        }
+    });
+
+    return JSON.stringify(jsonData, null, 2);
+}
+
+async function convertXLStoJSON(file: File): Promise<string> {
+    // ExcelJS doesn't support .xls format directly, but we can try to read it
+    // Note: For true .xls support, a different library would be needed
+    // However, many .xls files are actually saved as .xlsx in newer versions
+    try {
+        // Dynamic import - only loads ExcelJS when Excel files are uploaded
+        const ExcelJS = (await import('exceljs')).default;
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(arrayBuffer);
+
+        // Get the first worksheet
+        const worksheet = workbook.worksheets[0];
+        
+        if (!worksheet) {
+            throw new Error('No worksheet found in the Excel file');
+        }
+
+        // Get headers from first row
+        const headers: string[] = [];
+        const firstRow = worksheet.getRow(1);
+        firstRow.eachCell((cell, colNumber) => {
+            headers[colNumber - 1] = cell.text || `Column${colNumber}`;
+        });
+
+        // Convert rows to JSON
+        const jsonData: any[] = [];
+        worksheet.eachRow((row, rowNumber) => {
+            if (rowNumber === 1) return; // Skip header row
+            
+            const rowData: any = {};
+            row.eachCell((cell, colNumber) => {
+                const header = headers[colNumber - 1];
+                if (header && cell.value !== null && cell.value !== undefined) {
+                    rowData[header] = cell.value;
+                }
+            });
+            
+            // Only add non-empty rows
+            if (Object.keys(rowData).length > 0) {
+                jsonData.push(rowData);
+            }
+        });
+
+        return JSON.stringify(jsonData, null, 2);
+    } catch (error) {
+        throw new Error('Failed to parse XLS file. Please convert it to XLSX format or save as CSV.');
+    }
+}
+
+async function convertTXTtoJSON(file: File): Promise<string> {
+    const text = await readFileAsText(file);
+
+    // Store TXT content for later reprocessing
+    currentTxtFileContent = text;
+
+    // Try to parse as JSON first
+    try {
+        JSON.parse(text);
+        return text; // It's already valid JSON
+    } catch {
+        // Auto-detect delimiter and convert
+        // TXT options will be shown inline in file-info
+        return await processTxtFile(text, null, null);
+    }
+}
+
+async function processTxtFile(text: string, delimiter: string | null, hasHeader: boolean | null): Promise<string> {
+    try {
+        // Call backend endpoint to convert TXT to JSON
+        const response = await axios.post<any>(`${API_URL}/convert-txt-to-json`, {
+            text: text,
+            delimiter: delimiter === 'auto' ? null : delimiter,
+            has_header: hasHeader,
+            preview_lines: 200
+        });
+
+        const { json_data, delimiter_used, has_header, total_rows, is_preview } = response.data;
+
+        // Show compact badge for row count
+        const txtPreviewInfo = document.getElementById('txtPreviewInfo');
+        if (txtPreviewInfo) {
+            if (is_preview) {
+                txtPreviewInfo.innerHTML = `<span class="txt-preview-badge">⚠️ ${total_rows} rows (preview)</span>`;
+            } else {
+                txtPreviewInfo.innerHTML = `<span style="color: var(--text-muted); font-size: 10px;">• ${total_rows} rows</span>`;
+            }
+        }
+
+        // Update delimiter select if auto-detected
+        if (!delimiter || delimiter === 'auto') {
+            const delimiterSelect = document.getElementById('delimiterSelect') as HTMLSelectElement;
+            if (delimiterSelect) {
+                // Map backend delimiter to select value
+                const delimiterMap: { [key: string]: string } = {
+                    ',': ',',
+                    '\t': '\t',
+                    '|': '|',
+                    ';': ';',
+                    ' ': ' ',
+                    '\n': '\n'
+                };
+                delimiterSelect.value = delimiterMap[delimiter_used] || 'auto';
+            }
+        }
+
+        // Update header checkbox
+        const hasHeaderCheck = document.getElementById('hasHeaderCheck') as HTMLInputElement;
+        if (hasHeaderCheck && hasHeader === null) {
+            hasHeaderCheck.checked = has_header;
+        }
+
+        return json_data;
+
+    } catch (error) {
+        console.error('TXT processing error:', error);
+        throw new Error('Failed to process TXT file. Please check the format and try again.');
+    }
 }
 
 function showFileInfo(file: File, format: string): void {
     const fileSizeKB = (file.size / 1024).toFixed(2);
     const formatBadge = format.toUpperCase();
-    fileInfo.innerHTML = `
+
+    let fileInfoHTML = `
         <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
         </svg>
-        <span><strong>${file.name}</strong> (${fileSizeKB} KB) • ${formatBadge} detected</span>
+        <span class="file-info-text"><strong>${file.name}</strong> (${fileSizeKB} KB) • ${formatBadge} detected</span>
     `;
+
+    // Add TXT options inline if it's a TXT file
+    if (format === 'txt') {
+        fileInfoHTML += `
+            <div class="file-info-divider"></div>
+            <div class="txt-options-inline">
+                <select id="delimiterSelect" class="txt-inline-select">
+                    <option value="auto">Auto</option>
+                    <option value=",">Comma</option>
+                    <option value="\t">Tab</option>
+                    <option value="|">Pipe</option>
+                    <option value=";">Semicolon</option>
+                    <option value=" ">Space</option>
+                    <option value="\n">Newline</option>
+                </select>
+                <label class="txt-inline-checkbox">
+                    <input type="checkbox" id="hasHeaderCheck" checked>
+                    <span>Header</span>
+                </label>
+                <button id="applyTxtOptions" class="btn-apply-inline">Apply</button>
+                <span id="txtPreviewInfo"></span>
+            </div>
+        `;
+    }
+
+    fileInfo.innerHTML = fileInfoHTML;
     fileInfo.style.display = 'flex';
+
+    // Re-attach event listeners for TXT options if it's a TXT file
+    if (format === 'txt') {
+        attachTxtOptionsListeners();
+    }
+}
+
+function attachTxtOptionsListeners(): void {
+    const applyBtn = document.getElementById('applyTxtOptions');
+    if (applyBtn) {
+        applyBtn.addEventListener('click', async () => {
+            if (!currentTxtFileContent) return;
+
+            try {
+                setLoading(true);
+                hideError();
+
+                const delimiterSelect = document.getElementById('delimiterSelect') as HTMLSelectElement;
+                const hasHeaderCheck = document.getElementById('hasHeaderCheck') as HTMLInputElement;
+
+                const delimiter = delimiterSelect?.value || 'auto';
+                const hasHeader = hasHeaderCheck?.checked;
+
+                // Reprocess the TXT file with new settings
+                const jsonData = await processTxtFile(
+                    currentTxtFileContent,
+                    delimiter === 'auto' ? null : delimiter,
+                    hasHeader
+                );
+
+                jsonInput.value = jsonData;
+                const lines = jsonData.split('\n').length;
+                updateLineNumbers(jsonLineNumbers, lines);
+
+                // Check if it's an array and show table view option
+                try {
+                    const parsed = JSON.parse(jsonData);
+                    if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object') {
+                        currentDataArray = parsed;
+                        viewToggleBtn.style.display = 'inline-flex';
+                    }
+                } catch (e) {
+                    // Not valid JSON array
+                }
+
+            } catch (error) {
+                showError((error as Error).message);
+            } finally {
+                setLoading(false);
+            }
+        });
+    }
 }
 
 // Download Handler
@@ -706,6 +929,7 @@ function handleClear(): void {
     downloadBtn.disabled = true;
     fileInfo.style.display = 'none';
     currentFileName = '';
+    currentTxtFileContent = '';
 
     // Reset table view
     currentDataArray = null;

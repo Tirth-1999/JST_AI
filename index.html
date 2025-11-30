@@ -172,7 +172,7 @@
                     <div class="panel-header">
                         <span class="panel-title">JSON (JavaScript Object Notation)</span>
                         <div class="panel-actions">
-                            <input type="file" id="fileInput" accept=".json,.csv,.xlsx" style="display: none;">
+                            <input type="file" id="fileInput" accept=".json,.csv,.xlsx,.xls,.txt" style="display: none;">
                             <button id="uploadBtn" class="btn-ghost" title="Upload JSON, CSV, or XLSX file">
                                 <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
                                     <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
@@ -188,7 +188,10 @@
                             <button id="clearInput" class="btn-ghost">Clear</button>
                         </div>
                     </div>
-                    <div class="file-info" id="fileInfo" style="display: none;"></div>
+                    <div class="file-info" id="fileInfo" style="display: none;">
+                        <!-- File info content will be populated here -->
+                        <!-- TXT options will be added inline here for .txt files -->
+                    </div>
                     <div class="table-view-container" id="tableViewContainer" style="display: none;"></div>
                     <div class="editor-wrapper">
                         <div class="line-numbers" id="jsonLineNumbers"></div>

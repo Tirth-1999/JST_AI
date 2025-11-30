@@ -9,11 +9,13 @@ import os
 from dotenv import load_dotenv
 import resend
 import httpx
+import asyncio
 
 from toon_converter import json_to_toon, calculate_metrics
 from database import engine, get_db
 import models
 from auth import oauth, create_access_token, get_current_user, get_or_create_user
+import re
 
 # Load environment variables
 load_dotenv()
@@ -91,6 +93,35 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     response: str
+
+
+class TxtParseRequest(BaseModel):
+    text: str
+    preview_only: bool = False  # If true, only analyze a sample
+
+
+class DelimiterInfo(BaseModel):
+    delimiter: str
+    delimiter_name: str
+    confidence: float
+    has_header: bool
+    column_count: int
+    sample_rows: List[List[str]]
+
+
+class TxtConvertRequest(BaseModel):
+    text: str
+    delimiter: Optional[str] = None  # If None, auto-detect
+    has_header: Optional[bool] = None  # If None, auto-detect
+    preview_lines: int = 200  # For large files, only show preview
+
+
+class TxtConvertResponse(BaseModel):
+    json_data: str
+    delimiter_used: str
+    has_header: bool
+    total_rows: int
+    is_preview: bool  # True if file was too large and we're showing preview
 
 
 class UserResponse(BaseModel):
@@ -571,60 +602,385 @@ async def generate_insights(request: InsightsRequest):
         if not gemini_api_key:
             raise HTTPException(status_code=500, detail="Gemini API not configured")
 
-        prompt = f"""Analyze this dataset and provide 4-5 key insights:
+        # Enhanced prompt to ensure we get exactly 5 insights
+        prompt = f"""Analyze this dataset and provide EXACTLY 5 key insights.
 
+Dataset Summary:
 {request.summary}
 
-Provide insights as a bulleted list. Focus on:
-- Interesting patterns or trends
-- Statistical significance
-- Potential correlations
-- Data quality observations
-- Actionable recommendations
+REQUIREMENTS:
+1. Generate EXACTLY 5 distinct insights (no more, no less)
+2. Each insight must be substantive and data-driven
+3. Format each insight as a markdown bullet point (starting with -)
+4. Focus on different aspects:
+   - Statistical patterns and trends
+   - Data distribution and outliers
+   - Correlations or relationships
+   - Data quality observations
+   - Actionable recommendations or predictions
 
-Format as markdown bullet points."""
+Format your response as:
+- Insight 1: [Your first insight here]
+- Insight 2: [Your second insight here]
+- Insight 3: [Your third insight here]
+- Insight 4: [Your fourth insight here]
+- Insight 5: [Your fifth insight here]"""
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_api_key}",
-                json={
-                    "contents": [{
-                        "parts": [{
-                            "text": prompt
-                        }]
-                    }],
-                    "generationConfig": {
-                        "temperature": 0.7,
-                        "maxOutputTokens": 2048,
-                    }
-                }
-            )
+        # Retry logic for rate limits
+        max_retries = 5  # Increased from 3 to 5
+        last_error = None
+        last_status_code = None
 
-            if response.status_code != 200:
-                raise HTTPException(status_code=500, detail=f"Gemini API error: {response.status_code}")
+        for attempt in range(max_retries):
+            try:
+                print(f"\n=== Insights Generation Attempt {attempt + 1}/{max_retries} ===")
 
-            result = response.json()
-            candidate = result["candidates"][0]
-            
-            if "content" in candidate:
-                if "parts" in candidate["content"]:
-                    insights_text = candidate["content"]["parts"][0]["text"]
-                elif "text" in candidate["content"]:
-                    insights_text = candidate["content"]["text"]
-                else:
-                    raise HTTPException(status_code=500, detail="Unexpected response structure")
-            else:
-                raise HTTPException(status_code=500, detail="No content in response")
+                async with httpx.AsyncClient(timeout=90.0) as client:  # Increased timeout to 90s
+                    response = await client.post(
+                        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_api_key}",
+                        json={
+                            "contents": [{
+                                "parts": [{
+                                    "text": prompt
+                                }]
+                            }],
+                            "generationConfig": {
+                                "temperature": 0.7,
+                                "maxOutputTokens": 4096,  # Increased from 2048 to 4096
+                                "topP": 0.95,
+                                "topK": 40,
+                            },
+                            "safetySettings": [
+                                {
+                                    "category": "HARM_CATEGORY_HARASSMENT",
+                                    "threshold": "BLOCK_NONE"
+                                },
+                                {
+                                    "category": "HARM_CATEGORY_HATE_SPEECH",
+                                    "threshold": "BLOCK_NONE"
+                                },
+                                {
+                                    "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                                    "threshold": "BLOCK_NONE"
+                                },
+                                {
+                                    "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                                    "threshold": "BLOCK_NONE"
+                                }
+                            ]
+                        }
+                    )
 
-            return InsightsResponse(insights=insights_text)
+                    last_status_code = response.status_code
+                    print(f"Response status: {response.status_code}")
+
+                    if response.status_code == 429:  # Rate limit
+                        wait_time = (2 ** attempt) + 1  # 2s, 3s, 5s, 9s, 17s
+                        print(f"Rate limited. Waiting {wait_time}s before retry...")
+                        if attempt < max_retries - 1:
+                            await asyncio.sleep(wait_time)
+                            continue
+                        raise HTTPException(status_code=429, detail="Rate limit exceeded. Please try again in a moment.")
+
+                    if response.status_code == 503:  # Service unavailable
+                        print(f"Service unavailable. Retrying...")
+                        if attempt < max_retries - 1:
+                            await asyncio.sleep(2 ** attempt)
+                            continue
+                        raise HTTPException(status_code=503, detail="Gemini API temporarily unavailable")
+
+                    if response.status_code != 200:
+                        error_detail = response.text[:500]  # Limit error text
+                        print(f"API error: {response.status_code} - {error_detail}")
+
+                        # Retry on server errors
+                        if response.status_code >= 500 and attempt < max_retries - 1:
+                            print(f"Server error. Retrying...")
+                            await asyncio.sleep(2 ** attempt)
+                            continue
+
+                        raise HTTPException(status_code=500, detail=f"Gemini API error: {response.status_code}")
+
+                    result = response.json()
+                    print(f"Response keys: {list(result.keys())}")
+
+                    # Check for candidates
+                    if "candidates" not in result or len(result["candidates"]) == 0:
+                        print(f"No candidates. Full response: {json.dumps(result, indent=2)}")
+
+                        # Check if blocked by safety
+                        if "promptFeedback" in result:
+                            feedback = result["promptFeedback"]
+                            print(f"Prompt feedback: {feedback}")
+                            if "blockReason" in feedback:
+                                # Try again with a simpler prompt
+                                if attempt < max_retries - 1:
+                                    print(f"Content blocked. Retrying with adjusted prompt...")
+                                    await asyncio.sleep(1)
+                                    continue
+                                raise HTTPException(status_code=400, detail=f"Content blocked: {feedback['blockReason']}")
+
+                        # Retry if no candidates
+                        if attempt < max_retries - 1:
+                            print(f"No candidates returned. Retrying...")
+                            await asyncio.sleep(2)
+                            continue
+                        raise HTTPException(status_code=500, detail="No insights generated")
+
+                    candidate = result["candidates"][0]
+                    print(f"Candidate keys: {list(candidate.keys())}")
+
+                    # Check finish reason
+                    if "finishReason" in candidate:
+                        finish_reason = candidate["finishReason"]
+                        print(f"Finish reason: {finish_reason}")
+
+                        if finish_reason == "SAFETY":
+                            if attempt < max_retries - 1:
+                                print(f"Safety filter triggered. Retrying...")
+                                await asyncio.sleep(1)
+                                continue
+                            raise HTTPException(status_code=400, detail="Content blocked by safety filters")
+
+                        if finish_reason == "MAX_TOKENS":
+                            print(f"Warning: Response was truncated at max tokens")
+
+                        if finish_reason not in ["STOP", "MAX_TOKENS"]:
+                            print(f"Unexpected finish reason: {finish_reason}")
+                            if attempt < max_retries - 1:
+                                await asyncio.sleep(1)
+                                continue
+
+                    # Extract text from response
+                    insights_text = None
+                    if "content" in candidate:
+                        if "parts" in candidate["content"] and len(candidate["content"]["parts"]) > 0:
+                            insights_text = candidate["content"]["parts"][0].get("text")
+                        elif "text" in candidate["content"]:
+                            insights_text = candidate["content"]["text"]
+
+                    if not insights_text or len(insights_text.strip()) == 0:
+                        print(f"Empty or missing text. Candidate: {json.dumps(candidate, indent=2)}")
+                        if attempt < max_retries - 1:
+                            print(f"Empty response. Retrying...")
+                            await asyncio.sleep(2)
+                            continue
+                        raise HTTPException(status_code=500, detail="Failed to extract insights from response")
+
+                    # Validate we got insights
+                    insight_count = insights_text.count('-')
+                    print(f"Generated {insight_count} insights")
+
+                    if insight_count < 3 and attempt < max_retries - 1:
+                        print(f"Insufficient insights ({insight_count}). Retrying...")
+                        await asyncio.sleep(1)
+                        continue
+
+                    print(f"✓ Successfully generated insights")
+                    return InsightsResponse(insights=insights_text)
+
+            except HTTPException:
+                raise
+            except httpx.TimeoutException as e:
+                print(f"Timeout on attempt {attempt + 1}: {str(e)}")
+                last_error = "Request timeout - API took too long to respond"
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2)
+                    continue
+            except httpx.RequestError as e:
+                print(f"Request error on attempt {attempt + 1}: {str(e)}")
+                last_error = f"Network error: {str(e)}"
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2)
+                    continue
+            except json.JSONDecodeError as e:
+                print(f"JSON decode error on attempt {attempt + 1}: {str(e)}")
+                last_error = "Invalid response from API"
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2)
+                    continue
+            except KeyError as e:
+                print(f"KeyError on attempt {attempt + 1}: {str(e)}")
+                print(f"This might be due to unexpected API response structure")
+                last_error = f"Unexpected response structure: {str(e)}"
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2)
+                    continue
+            except Exception as e:
+                print(f"Unexpected error on attempt {attempt + 1}: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                last_error = str(e)
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2)
+                    continue
+                raise
+
+        # If all retries failed
+        error_msg = f"Failed after {max_retries} attempts."
+        if last_status_code:
+            error_msg += f" Last status: {last_status_code}."
+        if last_error:
+            error_msg += f" Error: {last_error}"
+
+        print(f"\n=== All retries exhausted ===")
+        print(error_msg)
+        raise HTTPException(status_code=500, detail=error_msg)
 
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Insights generation error: {str(e)}")
+        print(f"\n=== Fatal error in insights generation ===")
+        print(f"Error: {str(e)}")
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Insights generation failed: {str(e)}")
+
+
+def clean_ai_response(text: str) -> str:
+    """
+    Clean up AI-generated responses by removing unnecessary formatting artifacts
+    and making them more conversational.
+    """
+    # Remove horizontal rules (---)
+    text = re.sub(r'^-{3,}\s*$', '', text, flags=re.MULTILINE)
+
+    # Remove numbered section headers (### 1. Something, ### 2. Something)
+    text = re.sub(r'^###?\s*\d+\.\s*(.+)$', r'**\1**', text, flags=re.MULTILINE)
+
+    # Remove common AI section headers (case insensitive)
+    sections_to_remove = [
+        # Conclusions
+        r'^###?\s*Conclusion:?\s*$',
+        r'^###?\s*In conclusion:?\s*$',
+        r'^###?\s*To conclude:?\s*$',
+        r'^###?\s*Final thoughts:?\s*$',
+
+        # Summaries
+        r'^###?\s*Summary:?\s*$',
+        r'^###?\s*In summary:?\s*$',
+        r'^###?\s*To summarize:?\s*$',
+
+        # Answers
+        r'^###?\s*Answer:?\s*$',
+        r'^###?\s*Response:?\s*$',
+        r'^###?\s*My answer:?\s*$',
+
+        # Analysis
+        r'^###?\s*Analysis:?\s*$',
+        r'^###?\s*Data analysis:?\s*$',
+        r'^###?\s*Key findings:?\s*$',
+
+        # Introductions
+        r'^###?\s*Introduction:?\s*$',
+        r'^###?\s*Overview:?\s*$',
+
+        # Others
+        r'^###?\s*Interpretation:?\s*$',
+        r'^###?\s*Calculation:?\s*$',
+        r'^###?\s*Results?:?\s*$',
+        r'^###?\s*Explanation:?\s*$',
+    ]
+
+    for pattern in sections_to_remove:
+        text = re.sub(pattern, '', text, flags=re.IGNORECASE | re.MULTILINE)
+
+    # Remove subsection headers like "#### Something:"
+    text = re.sub(r'^####\s*(.+?):\s*$', r'**\1:**', text, flags=re.MULTILINE)
+
+    # Remove any remaining ### or ## headers (convert main content to bold)
+    # But keep the actual content
+    text = re.sub(r'^###\s+(.+)$', r'**\1**', text, flags=re.MULTILINE)
+    text = re.sub(r'^##\s+(.+)$', r'**\1**', text, flags=re.MULTILINE)
+
+    # Remove "Note:" and "Important:" prefixes if they're standalone
+    text = re.sub(r'^\*\*Note:\*\*\s*', '', text, flags=re.MULTILINE)
+    text = re.sub(r'^\*\*Important:\*\*\s*', '', text, flags=re.MULTILINE)
+
+    # Remove redundant opening phrases at the start
+    opening_phrases = [
+        r'^Based on the (data|information|dataset) (provided|given|available|you shared),?\s*',
+        r'^According to the (data|information),?\s*',
+        r'^From the data,?\s*',
+        r'^Looking at the (data|information),?\s*',
+        r'^Analyzing the (data|information),?\s*',
+        r'^After analyzing the data,?\s*',
+        r'^From what I can see,?\s*',
+        r'^As per the data,?\s*',
+        r'^In the context of .+?,?\s*',
+    ]
+
+    for pattern in opening_phrases:
+        text = re.sub(pattern, '', text, flags=re.IGNORECASE)
+
+    # Remove closing phrases
+    closing_phrases = [
+        r'\s*I hope this helps!?\s*$',
+        r'\s*Let me know if you (need|want|have) (any )?(more|other|further) (questions|help|assistance)!?\s*$',
+        r'\s*Feel free to ask if you have (any )?(more|other) questions!?\s*$',
+        r'\s*Is there anything else (you\'d like to know|I can help with)\??\s*$',
+        r'\s*Does this answer your question\??\s*$',
+    ]
+
+    for pattern in closing_phrases:
+        text = re.sub(pattern, '', text, flags=re.IGNORECASE)
+
+    # Remove "Here's" type openings
+    text = re.sub(r'^Here\'s (what|the answer|my analysis|how):?\s*', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'^Here is (what|the answer|my analysis|how):?\s*', '', text, flags=re.IGNORECASE)
+
+    # Remove meta-commentary and tutorial phrases
+    meta_phrases = [
+        r'^Let\'s explore.+?[\.:]?\s*',
+        r'^We intuitively expect.+?\.\s*',
+        r'^For this analysis, we\'ll use.+?\.\s*',
+        r'^We can use.+?\.\s*',
+        r'^We\'ll use.+?\.\s*',
+        r'^You will (likely )?get.+?\.\s*',
+        r'^You\'ll (observe|see).+?\.\s*',
+        r'^To show.+?, we can.+?\.\s*',
+    ]
+
+    for pattern in meta_phrases:
+        text = re.sub(pattern, '', text, flags=re.IGNORECASE | re.MULTILINE)
+
+    # Remove tutorial-style numbered instructions
+    text = re.sub(r'^\d+\.\s+[A-Z][^:]+:\s*$', '', text, flags=re.MULTILINE)
+
+    # Remove code blocks in R, Python, etc (user already has data, doesn't need code)
+    # Remove R code blocks
+    text = re.sub(r'```[Rr]\n.+?```', '', text, flags=re.DOTALL)
+    # Remove Python code blocks
+    text = re.sub(r'```python\n.+?```', '', text, flags=re.DOTALL)
+    # Remove generic code blocks
+    text = re.sub(r'```\n.+?```', '', text, flags=re.DOTALL)
+
+    # Remove inline R code markers
+    text = re.sub(r'\bR\n', '', text)
+
+    # Remove "Using X" section headers
+    text = re.sub(r'^###?\s*Using (R|Python|SQL).+?$', '', text, flags=re.IGNORECASE | re.MULTILINE)
+
+    # Remove "Result:" or "Output:" lines
+    text = re.sub(r'^(Result|Output|Interpretation of the Output):?\s*$', '', text, flags=re.IGNORECASE | re.MULTILINE)
+
+    # Remove installation instructions
+    text = re.sub(r'install\.packages.+', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'pip install.+', '', text, flags=re.IGNORECASE)
+
+    # Clean up excessive line breaks (more than 2 consecutive)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+
+    # Remove empty bold sections
+    text = re.sub(r'\*\*\s*\*\*', '', text)
+
+    # Remove leading/trailing whitespace
+    text = text.strip()
+
+    # If the response is mostly code blocks or examples, keep them
+    # Otherwise, try to make it more conversational
+
+    return text
 
 
 @app.post("/chat", response_model=ChatResponse)
@@ -635,57 +991,391 @@ async def chat(request: ChatRequest):
         if not gemini_api_key:
             raise HTTPException(status_code=500, detail="Gemini API not configured")
 
-        # Build context-aware prompt
+        # Build context-aware prompt with conversational instructions
         if request.context:
-            prompt = f"""You are a helpful data analyst assistant. Here is the data context:
+            prompt = f"""You're answering a colleague's quick question about their data. Be direct and conversational.
 
-{request.context}
+Data: {request.context}
 
-User Question: {request.message}
+Question: {request.message}
 
-Provide a clear, concise answer based on the data provided. If you need to calculate something, show your work."""
+FORBIDDEN - DO NOT INCLUDE:
+❌ "### " or "## " headers of ANY kind
+❌ "---" horizontal lines
+❌ Numbered steps like "1. Calculate" or "2. Visualize"
+❌ Code examples in R or Python (they already have the data)
+❌ Tutorial instructions like "Load the data" or "Install packages"
+❌ Phrases: "Let's", "We can", "We'll use", "You will get"
+❌ Section labels: "Conclusion", "Result", "Interpretation", "Using X"
+❌ Meta-talk about what you're going to explain
+❌ "I hope this helps" or similar closings
+
+REQUIRED - YOU MUST:
+✓ Start immediately with the direct answer
+✓ State the key finding in the first sentence
+✓ If showing math, do it inline: "The average is 42 (sum 420 / count 10)"
+✓ Maximum 3-4 short sentences unless calculation needed
+✓ Sound like a human, not a textbook
+✓ Skip obvious context the user already knows
+
+Example of GOOD answer:
+"The correlation is -0.85, which is strong and negative. Cars with more cylinders get worse MPG - about 26 MPG for 4-cylinder vs 15 MPG for 8-cylinder in your data."
+
+Example of BAD answer (DO NOT DO THIS):
+"### Correlation Analysis
+Let's explore the relationship...
+1. Calculate correlation: -0.85
+2. Interpretation: This shows..."
+
+Your concise answer:"""
         else:
-            prompt = request.message
+            prompt = f"""Answer this directly in 2-3 sentences max:
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_api_key}",
-                json={
-                    "contents": [{
-                        "parts": [{
-                            "text": prompt
-                        }]
-                    }],
-                    "generationConfig": {
-                        "temperature": 0.7,
-                        "maxOutputTokens": 2048,
-                    }
-                }
-            )
+{request.message}
 
-            if response.status_code != 200:
-                raise HTTPException(status_code=500, detail=f"Gemini API error: {response.status_code}")
+No headers, code, or tutorials. Just the answer."""
 
-            result = response.json()
-            candidate = result["candidates"][0]
-            
-            if "content" in candidate:
-                if "parts" in candidate["content"]:
-                    response_text = candidate["content"]["parts"][0]["text"]
-                elif "text" in candidate["content"]:
-                    response_text = candidate["content"]["text"]
-                else:
-                    raise HTTPException(status_code=500, detail="Unexpected response structure")
-            else:
-                raise HTTPException(status_code=500, detail="No content in response")
+        # Retry logic
+        max_retries = 5
+        last_error = None
 
-            return ChatResponse(response=response_text)
+        for attempt in range(max_retries):
+            try:
+                async with httpx.AsyncClient(timeout=90.0) as client:
+                    response = await client.post(
+                        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_api_key}",
+                        json={
+                            "contents": [{
+                                "parts": [{
+                                    "text": prompt
+                                }]
+                            }],
+                            "generationConfig": {
+                                "temperature": 0.8,  # Higher for more natural conversation
+                                "maxOutputTokens": 4096,
+                                "topP": 0.95,
+                                "topK": 40,
+                            },
+                            "safetySettings": [
+                                {
+                                    "category": "HARM_CATEGORY_HARASSMENT",
+                                    "threshold": "BLOCK_NONE"
+                                },
+                                {
+                                    "category": "HARM_CATEGORY_HATE_SPEECH",
+                                    "threshold": "BLOCK_NONE"
+                                },
+                                {
+                                    "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                                    "threshold": "BLOCK_NONE"
+                                },
+                                {
+                                    "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                                    "threshold": "BLOCK_NONE"
+                                }
+                            ]
+                        }
+                    )
+
+                    if response.status_code == 429:  # Rate limit
+                        if attempt < max_retries - 1:
+                            import asyncio
+                            await asyncio.sleep(2 ** attempt)
+                            continue
+                        raise HTTPException(status_code=429, detail="Rate limit exceeded. Please try again.")
+
+                    if response.status_code != 200:
+                        print(f"Gemini API error: {response.status_code} - {response.text}")
+                        raise HTTPException(status_code=500, detail=f"Gemini API error: {response.status_code}")
+
+                    result = response.json()
+
+                    # Check for candidates
+                    if "candidates" not in result or len(result["candidates"]) == 0:
+                        if "promptFeedback" in result and "blockReason" in result["promptFeedback"]:
+                            raise HTTPException(status_code=400, detail="Content blocked by safety filters")
+                        raise HTTPException(status_code=500, detail="No response generated")
+
+                    candidate = result["candidates"][0]
+
+                    # Check finish reason
+                    if "finishReason" in candidate and candidate["finishReason"] == "SAFETY":
+                        raise HTTPException(status_code=400, detail="Response blocked by safety filters")
+
+                    # Extract text
+                    response_text = None
+                    if "content" in candidate:
+                        if "parts" in candidate["content"]:
+                            response_text = candidate["content"]["parts"][0]["text"]
+                        elif "text" in candidate["content"]:
+                            response_text = candidate["content"]["text"]
+
+                    if not response_text:
+                        raise HTTPException(status_code=500, detail="Failed to extract response")
+
+                    # Clean up AI-generated formatting artifacts
+                    cleaned_response = clean_ai_response(response_text)
+
+                    return ChatResponse(response=cleaned_response)
+
+            except HTTPException:
+                raise
+            except httpx.TimeoutException:
+                last_error = "Request timeout"
+                if attempt < max_retries - 1:
+                    import asyncio
+                    await asyncio.sleep(1)
+                    continue
+            except Exception as e:
+                last_error = str(e)
+                if attempt < max_retries - 1:
+                    import asyncio
+                    await asyncio.sleep(1)
+                    continue
+                raise
+
+        raise HTTPException(status_code=500, detail=f"Failed after {max_retries} attempts: {last_error}")
 
     except HTTPException:
         raise
     except Exception as e:
         print(f"Chat error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
+
+
+@app.post("/detect-txt-delimiter", response_model=DelimiterInfo)
+async def detect_txt_delimiter(request: TxtParseRequest):
+    """Intelligently detect delimiter and structure of TXT file"""
+    try:
+        import csv
+        from io import StringIO
+        import re
+
+        text = request.text
+
+        # For preview, only analyze first 50 lines
+        lines = text.split('\n')
+        sample_size = min(50, len(lines)) if request.preview_only else len(lines)
+        sample_text = '\n'.join(lines[:sample_size])
+
+        # Common delimiters to test
+        delimiters = [
+            (',', 'comma'),
+            ('\t', 'tab'),
+            ('|', 'pipe'),
+            (';', 'semicolon'),
+            (' ', 'space')
+        ]
+
+        best_delimiter = None
+        best_score = 0
+        best_name = 'unknown'
+
+        # Test each delimiter
+        for delim, name in delimiters:
+            try:
+                # Parse with this delimiter
+                reader = csv.reader(StringIO(sample_text), delimiter=delim)
+                rows = list(reader)
+
+                if len(rows) < 2:
+                    continue
+
+                # Calculate consistency score
+                # Good delimiter produces consistent column counts
+                col_counts = [len(row) for row in rows if row]
+                if not col_counts:
+                    continue
+
+                avg_cols = sum(col_counts) / len(col_counts)
+                consistency = sum(1 for c in col_counts if c == col_counts[0]) / len(col_counts)
+
+                # Score: prefer higher column count and consistency
+                score = consistency * (1 + min(avg_cols / 10, 1))
+
+                # Bonus for common delimiters
+                if delim in [',', '\t']:
+                    score *= 1.2
+
+                if score > best_score and avg_cols > 1:
+                    best_score = score
+                    best_delimiter = delim
+                    best_name = name
+
+            except Exception as e:
+                continue
+
+        # If no delimiter found with multiple columns, check if it's single column data
+        if best_delimiter is None:
+            # Check if it's single column numeric data or text
+            non_empty_lines = [line.strip() for line in lines[:sample_size] if line.strip()]
+            if non_empty_lines:
+                # Single column - use newline as delimiter
+                best_delimiter = '\n'
+                best_name = 'newline (single column)'
+                best_score = 1.0
+
+        # Parse with best delimiter to get sample
+        if best_delimiter == '\n':
+            # Single column case
+            sample_rows = [[line.strip()] for line in lines[:5] if line.strip()]
+            column_count = 1
+
+            # Detect if first row is a header
+            # For single column, if first value is non-numeric and rest are numeric, it's likely a header
+            has_header = False
+            if len(sample_rows) > 1:
+                first_is_num = sample_rows[0][0].replace('.', '').replace('-', '').isdigit()
+                rest_are_num = all(
+                    row[0].replace('.', '').replace('-', '').replace('+', '').isdigit()
+                    for row in sample_rows[1:3] if row
+                )
+                has_header = not first_is_num and rest_are_num
+        else:
+            reader = csv.reader(StringIO(sample_text), delimiter=best_delimiter)
+            all_rows = [row for row in reader if row]
+            sample_rows = all_rows[:5]
+            column_count = len(sample_rows[0]) if sample_rows else 0
+
+            # Detect if first row is a header
+            # Header detection: first row has different data type pattern than subsequent rows
+            has_header = False
+            if len(all_rows) > 1:
+                first_row = all_rows[0]
+                second_row = all_rows[1] if len(all_rows) > 1 else []
+
+                if first_row and second_row:
+                    # Check if first row is all text and second row has numbers
+                    first_has_nums = any(cell.strip().replace('.', '').replace('-', '').isdigit() for cell in first_row if cell.strip())
+                    second_has_nums = any(cell.strip().replace('.', '').replace('-', '').isdigit() for cell in second_row if cell.strip())
+
+                    # If first row has no numbers but second row does, likely a header
+                    if not first_has_nums and second_has_nums:
+                        has_header = True
+                    # Also check for common header keywords
+                    elif any(keyword in ' '.join(first_row).lower() for keyword in ['name', 'id', 'date', 'value', 'column', 'field']):
+                        has_header = True
+
+        return DelimiterInfo(
+            delimiter=best_delimiter if best_delimiter else ',',
+            delimiter_name=best_name,
+            confidence=best_score,
+            has_header=has_header,
+            column_count=column_count,
+            sample_rows=sample_rows
+        )
+
+    except Exception as e:
+        print(f"Delimiter detection error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Detection error: {str(e)}")
+
+
+@app.post("/convert-txt-to-json", response_model=TxtConvertResponse)
+async def convert_txt_to_json(request: TxtConvertRequest):
+    """Convert TXT file to JSON with intelligent parsing"""
+    try:
+        import csv
+        from io import StringIO
+
+        text = request.text
+        lines = text.split('\n')
+        total_lines = len(lines)
+
+        # Determine if we need to show preview only
+        is_preview = total_lines > request.preview_lines
+
+        # For large files, show top 100 and bottom 100
+        if is_preview:
+            top_lines = lines[:100]
+            bottom_lines = lines[-100:]
+            # Add a separator comment
+            working_lines = top_lines + ['... (middle rows omitted) ...'] + bottom_lines
+            working_text = '\n'.join(working_lines)
+        else:
+            working_text = text
+            working_lines = lines
+
+        # Detect delimiter if not provided
+        if request.delimiter is None:
+            detect_request = TxtParseRequest(text=working_text, preview_only=True)
+            delimiter_info = await detect_txt_delimiter(detect_request)
+            delimiter = delimiter_info.delimiter
+            has_header = delimiter_info.has_header if request.has_header is None else request.has_header
+        else:
+            delimiter = request.delimiter
+            has_header = request.has_header if request.has_header is not None else False
+
+        # Parse the data
+        if delimiter == '\n':
+            # Single column data
+            data_lines = [line.strip() for line in working_lines if line.strip() and line.strip() != '... (middle rows omitted) ...']
+
+            if has_header and data_lines:
+                header = data_lines[0]
+                values = data_lines[1:]
+                json_array = [{header: val} for val in values]
+            else:
+                # Generate column name
+                json_array = [{"value": val} for val in data_lines]
+        else:
+            # Multi-column delimited data
+            reader = csv.reader(StringIO(working_text), delimiter=delimiter)
+            rows = [row for row in reader if row and row != ['... (middle rows omitted) ...']]
+
+            if not rows:
+                raise HTTPException(status_code=400, detail="No data found in file")
+
+            if has_header:
+                headers = rows[0]
+                data_rows = rows[1:]
+            else:
+                # Generate column names
+                num_cols = len(rows[0])
+                headers = [f"column_{i+1}" for i in range(num_cols)]
+                data_rows = rows
+
+            # Convert to JSON
+            json_array = []
+            for row in data_rows:
+                if len(row) == len(headers):
+                    row_dict = {}
+                    for i, header in enumerate(headers):
+                        # Try to convert to number if possible
+                        value = row[i]
+                        try:
+                            # Try int first
+                            if '.' not in value:
+                                row_dict[header] = int(value)
+                            else:
+                                row_dict[header] = float(value)
+                        except (ValueError, AttributeError):
+                            row_dict[header] = value
+                    json_array.append(row_dict)
+
+        json_data = json.dumps(json_array, indent=2)
+
+        # For actual conversion (not preview), use full dataset
+        actual_row_count = total_lines - 1 if has_header else total_lines
+
+        return TxtConvertResponse(
+            json_data=json_data,
+            delimiter_used=delimiter,
+            has_header=has_header,
+            total_rows=actual_row_count,
+            is_preview=is_preview
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"TXT conversion error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Conversion error: {str(e)}")
 
 
 if __name__ == "__main__":

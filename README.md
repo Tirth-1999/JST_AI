@@ -32,7 +32,7 @@ A modern full-stack web application that converts JSON to TOON (Token Optimized 
 
 ### Core Functionality
 - **Real-time Conversion**: Instantly convert JSON to optimized TOON format via Python backend
-- **Multiple Input Formats**: Support for JSON, CSV, and XLSX file uploads with auto-detection
+- **Multiple Input Formats**: Support for JSON, CSV, XLSX, XLS, and TXT file uploads with auto-detection
 - **Animated Metrics**: Smooth counter animations showing token savings in real-time
 - **One-Click Actions**: Copy results (always available), download as .txt files (requires sign-in)
 - **Syntax Highlighting**: Color-coded TOON output for better readability
@@ -200,7 +200,7 @@ The built files will be in the `dist/` directory.
 ## 📖 Usage
 
 ### For Everyone (No Sign-In Required)
-1. **Paste JSON** into the left editor or **upload a file** (JSON/CSV/XLSX)
+1. **Paste JSON** into the left editor or **upload a file** (JSON/CSV/XLSX/XLS/TXT)
 2. Click **"Convert to TOON"** (or press Ctrl/Cmd + Enter)
 3. View the optimized output with real-time metrics
 4. **Copy** the result to clipboard
@@ -215,7 +215,7 @@ The built files will be in the `dist/` directory.
 1. **Access**: Click the **AI Mode** tab (lightbulb icon with "AI" badge) in the header
 2. **Authentication Required**: If not signed in, you'll see a lock screen - click "Sign In" to proceed
 3. **Consent**: First-time users see a consent modal explaining AI features and data usage
-4. **Upload Data**: Drag & drop or upload JSON, CSV, or XLSX files for AI analysis
+4. **Upload Data**: Drag & drop or upload JSON, CSV, XLSX, XLS, or TXT files for AI analysis
 5. **Natural Language Queries**: Ask questions like:
    - "What patterns do you see in this data?"
    - "Summarize the key insights"
@@ -225,6 +225,37 @@ The built files will be in the `dist/` directory.
 8. **Session Management**: Consent is saved per session or permanently based on your choice
 
 **Note**: Ability Mode features require Google sign-in. If you log out while on the AI tab, you'll automatically switch to the Converter tab.
+
+## 📁 Supported File Formats
+
+The application supports multiple file formats with automatic detection and conversion to JSON before TOON conversion:
+
+### JSON (`.json`)
+- Direct parsing and validation
+- Must be valid JSON format
+- No conversion needed
+
+### CSV (`.csv`)
+- Auto-detects comma-separated values
+- Converts to array of objects with headers as keys
+- Supports type inference (numbers, booleans, strings)
+
+### Excel Files (`.xlsx`, `.xls`)
+- Reads the first sheet of the workbook
+- Converts to array of objects
+- Supports both modern (.xlsx) and legacy (.xls) formats
+- Automatically removes empty columns
+
+### Text Files (`.txt`)
+- **JSON Text**: If content is valid JSON, parses directly
+- **Delimited Data**: Auto-detects delimiter (comma, tab, pipe) and parses as CSV
+- **Plain Text**: Wraps content in structured object with metadata:
+  - Full text content
+  - Line-by-line array
+  - Word count
+  - Line count
+
+**Note**: All formats are converted to JSON on the frontend before being sent to the backend for TOON conversion.
 
 ### Mobile Experience (≤1024px screens)
 1. See only the JSON input initially
