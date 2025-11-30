@@ -76,6 +76,23 @@ class VisualizationResponse(BaseModel):
     charts: List[ChartData]
 
 
+class InsightsRequest(BaseModel):
+    summary: str  # Data summary from frontend
+
+
+class InsightsResponse(BaseModel):
+    insights: str
+
+
+class ChatRequest(BaseModel):
+    message: str
+    context: Optional[str] = None  # Data context/summary
+
+
+class ChatResponse(BaseModel):
+    response: str
+
+
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     
@@ -407,7 +424,7 @@ Return JSON (no markdown):
 """
 
         # Call Gemini API
-        gemini_api_key = os.getenv("GEMINI_API_KEY")
+        gemini_api_key = os.getenv("GEMINI_API_KEY", "").strip()
         if not gemini_api_key:
             raise HTTPException(status_code=500, detail="Gemini API not configured. Please add GEMINI_API_KEY to your .env file")
 
@@ -544,6 +561,131 @@ async def execute_visualization(request: Dict[str, Any]):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Execution error: {str(e)}")
+
+
+@app.post("/generate-insights", response_model=InsightsResponse)
+async def generate_insights(request: InsightsRequest):
+    """Generate insights from data summary using Gemini AI"""
+    try:
+        gemini_api_key = os.getenv("GEMINI_API_KEY", "").strip()
+        if not gemini_api_key:
+            raise HTTPException(status_code=500, detail="Gemini API not configured")
+
+        prompt = f"""Analyze this dataset and provide 4-5 key insights:
+
+{request.summary}
+
+Provide insights as a bulleted list. Focus on:
+- Interesting patterns or trends
+- Statistical significance
+- Potential correlations
+- Data quality observations
+- Actionable recommendations
+
+Format as markdown bullet points."""
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_api_key}",
+                json={
+                    "contents": [{
+                        "parts": [{
+                            "text": prompt
+                        }]
+                    }],
+                    "generationConfig": {
+                        "temperature": 0.7,
+                        "maxOutputTokens": 2048,
+                    }
+                }
+            )
+
+            if response.status_code != 200:
+                raise HTTPException(status_code=500, detail=f"Gemini API error: {response.status_code}")
+
+            result = response.json()
+            candidate = result["candidates"][0]
+            
+            if "content" in candidate:
+                if "parts" in candidate["content"]:
+                    insights_text = candidate["content"]["parts"][0]["text"]
+                elif "text" in candidate["content"]:
+                    insights_text = candidate["content"]["text"]
+                else:
+                    raise HTTPException(status_code=500, detail="Unexpected response structure")
+            else:
+                raise HTTPException(status_code=500, detail="No content in response")
+
+            return InsightsResponse(insights=insights_text)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Insights generation error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat(request: ChatRequest):
+    """Chat with AI about the data"""
+    try:
+        gemini_api_key = os.getenv("GEMINI_API_KEY", "").strip()
+        if not gemini_api_key:
+            raise HTTPException(status_code=500, detail="Gemini API not configured")
+
+        # Build context-aware prompt
+        if request.context:
+            prompt = f"""You are a helpful data analyst assistant. Here is the data context:
+
+{request.context}
+
+User Question: {request.message}
+
+Provide a clear, concise answer based on the data provided. If you need to calculate something, show your work."""
+        else:
+            prompt = request.message
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_api_key}",
+                json={
+                    "contents": [{
+                        "parts": [{
+                            "text": prompt
+                        }]
+                    }],
+                    "generationConfig": {
+                        "temperature": 0.7,
+                        "maxOutputTokens": 2048,
+                    }
+                }
+            )
+
+            if response.status_code != 200:
+                raise HTTPException(status_code=500, detail=f"Gemini API error: {response.status_code}")
+
+            result = response.json()
+            candidate = result["candidates"][0]
+            
+            if "content" in candidate:
+                if "parts" in candidate["content"]:
+                    response_text = candidate["content"]["parts"][0]["text"]
+                elif "text" in candidate["content"]:
+                    response_text = candidate["content"]["text"]
+                else:
+                    raise HTTPException(status_code=500, detail="Unexpected response structure")
+            else:
+                raise HTTPException(status_code=500, detail="No content in response")
+
+            return ChatResponse(response=response_text)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Chat error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":

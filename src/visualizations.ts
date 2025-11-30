@@ -140,14 +140,40 @@ export class VisualizationManager {
     }
 
     private createCarousel(): void {
+        // Get the parent container
+        const parentContainer = this.container.parentElement;
+        
         this.container.innerHTML = `
             <div class="viz-carousel">
                 <div class="viz-carousel-container">
                     <div class="viz-carousel-slides" id="vizCarouselSlides"></div>
                 </div>
-                <div class="viz-carousel-dots" id="vizCarouselDots"></div>
             </div>
         `;
+        
+        // Add dots container with navigation arrows
+        const dotsWrapper = document.createElement('div');
+        dotsWrapper.className = 'viz-carousel-dots-wrapper';
+        dotsWrapper.innerHTML = `
+            <button class="viz-nav-arrow viz-nav-arrow-left" id="vizCarouselPrev" aria-label="Previous chart">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
+            <div class="viz-carousel-dots" id="vizCarouselDots"></div>
+            <button class="viz-nav-arrow viz-nav-arrow-right" id="vizCarouselNext" aria-label="Next chart">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+            </button>
+        `;
+        parentContainer?.appendChild(dotsWrapper);
+        
+        // Add click handlers for arrows
+        const prevBtn = document.getElementById('vizCarouselPrev');
+        const nextBtn = document.getElementById('vizCarouselNext');
+        prevBtn?.addEventListener('click', () => this.navigateCarousel('prev'));
+        nextBtn?.addEventListener('click', () => this.navigateCarousel('next'));
     }
 
     private navigateCarousel(direction: 'prev' | 'next'): void {

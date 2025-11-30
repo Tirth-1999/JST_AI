@@ -57,13 +57,15 @@ A modern full-stack web application that converts JSON to TOON (Token Optimized 
 #### Sub-Tabs in AI Mode:
 1. **Lab**: Generate AI insights about your dataset with one click
 2. **Chat**: Interactive chat interface to ask questions about your data
-3. **Visualizations (NEW!)**: AI-powered exploratory data analysis (EDA)
+3. **Visualizations**: AI-powered exploratory data analysis (EDA)
    - **Automatic Chart Generation**: AI recommends 4 appropriate visualizations
    - **Smart Analysis**: Gemini analyzes your dataset structure and generates optimal charts
    - **Interactive Charts**: Powered by Plotly for dynamic, responsive visualizations
-   - **Chart Types**: Bar charts, line plots, pie charts, and scatter plots
+   - **Chart Types**: Bar charts, line plots, pie charts, scatter plots, and more
+   - **Card Flip Interface**: Click charts to see descriptions and analysis on the back
+   - **Navigation**: Swipe gestures, arrow keys, or carousel dots for easy browsing
    - **Code Execution**: Backend safely executes Python visualization code
-   - **Responsive Design**: Charts adapt to different screen sizes
+   - **Responsive Design**: Charts adapt to all screen sizes with optimized spacing
 
 ### UI/UX Excellence
 - **Modern Design**: Glassmorphism effects, gradient buttons, and smooth animations
@@ -127,12 +129,20 @@ A modern full-stack web application that converts JSON to TOON (Token Optimized 
    SECRET_KEY=generate_with_openssl_rand_-hex_32
    ALGORITHM=HS256
    ACCESS_TOKEN_EXPIRE_MINUTES=10080
+   
+   # Gemini AI Configuration (required for AI Mode features)
+   GEMINI_API_KEY=your_gemini_api_key_here
    ```
 
    **Generate SECRET_KEY:**
    ```bash
    openssl rand -hex 32
    ```
+   
+   **Get Gemini API Key:**
+   1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
+   2. Create a new API key
+   3. Add it to `backend/.env`
 
 5. **Update Google Client ID in frontend**
    
@@ -282,6 +292,7 @@ items[2]{id,value}
 - **httpx** - Async HTTP client
 - **Pydantic** - Data validation
 - **Uvicorn** - ASGI server
+- **Google Gemini AI** - Gemini 2.5 Flash model for AI features (backend-only)
 - **Plotly** - Python graphing library for visualization generation
 - **Pandas** - Data manipulation and analysis for chart data processing
 
@@ -312,6 +323,35 @@ items[2]{id,value}
   ```
 
 ### AI & Visualizations
+- `POST /generate-insights` - Generate AI insights about dataset
+  ```json
+  // Request
+  {"data": "[{\"name\":\"Alice\",\"age\":25},{\"name\":\"Bob\",\"age\":30}]"}
+  
+  // Response
+  {
+    "insights": [
+      "- The dataset contains 2 records with name and age fields",
+      "- Ages range from 25 to 30 years old"
+    ]
+  }
+  ```
+
+- `POST /chat` - Interactive AI chat about dataset
+  ```json
+  // Request
+  {
+    "data": "[{\"name\":\"Alice\",\"age\":25}]",
+    "message": "What is the average age?",
+    "conversationHistory": []
+  }
+  
+  // Response
+  {
+    "response": "The average age is 25 years old."
+  }
+  ```
+
 - `POST /generate-visualizations` - Generate AI-recommended visualizations
   ```json
   // Request
@@ -391,7 +431,7 @@ items[2]{id,value}
 - **Authentication Lock Overlay** - Prevents unauthorized access to AI features
 - **Auto-Logout Protection** - Automatic tab switching to prevent stuck states
 - **Consent Management** - User consent tracking for AI features (session & permanent)
-- **Secure API Keys** - Gemini API key stored server-side only
+- **Backend-Only API Keys** - Gemini API key stored exclusively on server-side, never exposed to frontend
 - **Session Clearing** - Conversion results cleared on login/logout for privacy
 
 ## 🎨 Customization
@@ -440,17 +480,6 @@ Modify breakpoints in `src/styles.css`:
 @media (min-width: 1025px) { /* ... */ }
 ```
 
-### Gemini AI Configuration
-Update AI model settings in `src/geminiConfig.ts`:
-```typescript
-export const GEMINI_CONFIG = {
-    model: 'gemini-1.5-flash',  // or 'gemini-pro'
-    temperature: 0.7,
-    maxOutputTokens: 2048,
-    // ... more settings
-};
-```
-
 ### Token Calculation
 Modify `backend/toon_converter.py` to adjust token counting logic.
 
@@ -471,16 +500,17 @@ lsof -ti:5173 | xargs kill -9
 ```
 
 **Google Sign-In not working:**
-- Verify `GOOGLE_CLIENT_ID` matches in `.env` and `main.ts`
+- Verify `GOOGLE_CLIENT_ID` matches in `backend/.env` and `src/main.ts`
 - Check authorized origins in Google Console
 - Clear browser cache and cookies
 - Ensure redirect URIs are correctly configured
 
 **AI Mode / Ability Mode not accessible:**
 - Verify you're signed in with Google (look for your avatar in header)
-- Check that Gemini API key is set in `src/geminiConfig.ts`
+- Check that Gemini API key is set in `backend/.env`
+- Ensure backend server is running on port 8000
+- Check browser console for API errors
 - Clear browser local storage and session storage, then reload
-- Check browser console for authentication errors
 
 **Tabs not visible or not switching:**
 - Ensure JavaScript is enabled in your browser
@@ -531,7 +561,7 @@ rm jst_ai.db
 ### Code Organization
 - **Modular architecture** - Separate files for auth, conversion, AI, styling
 - **Type definitions** - Centralized interfaces in `src/types.ts`
-- **Service layer pattern** - `authService` and `geminiService` for clean separation
+- **Service layer pattern** - Backend-only AI service for secure API key management
 - **Event-driven UI** - Efficient DOM manipulation with event delegation
 
 ### Performance Optimizations
@@ -554,7 +584,7 @@ rm jst_ai.db
 
 ### Security Best Practices
 - **CORS enabled** for local development (`localhost:5173` ↔ `localhost:8000`)
-- **API keys** never exposed in client-side code (Gemini key server-side only)
+- **Backend-Only API Keys** - All Gemini API calls handled server-side, never exposed to client
 - **SQL injection prevention** - Parameterized queries via SQLAlchemy ORM
 - **XSS protection** - Sanitized user inputs and proper escaping
 - **HTTPS ready** - Production configuration supports secure connections
@@ -569,12 +599,15 @@ rm jst_ai.db
 
 ### Recently Completed ✅
 - [x] Ability Mode (AI-powered analytics)
-- [x] Gemini AI integration
+- [x] Gemini AI integration (backend-only for security)
+- [x] AI-powered data visualizations with card flip interface
+- [x] Interactive carousel with swipe gestures and navigation
 - [x] Authentication lock overlay
 - [x] Sliding door tab animations
 - [x] Responsive header redesign
 - [x] Theme toggle improvements
 - [x] Auto-logout navigation protection
+- [x] Backend API endpoints for insights and chat
 
 ### Planned Features
 - [ ] Conversion history page
@@ -582,8 +615,8 @@ rm jst_ai.db
 - [ ] Export conversion history
 - [ ] User dashboard with statistics
 - [ ] AI Mode: Multiple AI model support (Claude, GPT-4, etc.)
-- [ ] AI Mode: Data visualization charts and graphs
 - [ ] AI Mode: Export AI analysis reports
+- [ ] AI Mode: Save and share visualizations
 - [ ] Rate limiting per user
 - [ ] API key generation for developers
 - [ ] Batch conversion support

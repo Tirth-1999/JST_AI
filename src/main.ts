@@ -1004,19 +1004,9 @@ downloadBtn.disabled = true;
 // ============================================
 
 // Import ability mode functions
-import { GeminiService } from './geminiService';
-import { GEMINI_CONFIG } from './geminiConfig';
 import { DataAnalyzer } from './dataAnalysis';
 
-let geminiService: GeminiService | null = null;
 let currentJsonData: any = null;
-
-// Initialize Gemini service
-function initGeminiService() {
-    if (!geminiService) {
-        geminiService = new GeminiService(GEMINI_CONFIG);
-    }
-}
 
 // Tab switching
 const tabButtons = document.querySelectorAll('.tab-button');
@@ -1179,8 +1169,6 @@ analyzeBtn?.addEventListener('click', async () => {
             </div>
             Analyzing...
         `;
-
-        initGeminiService();
         
         // Parse JSON data
         const data = JSON.parse(jsonInput.value);
@@ -1191,13 +1179,30 @@ analyzeBtn?.addEventListener('click', async () => {
         analyzer.analyze();
         const summary = analyzer.generateSummary();
         
-        geminiService!.setDataContext(summary);
+        // Get insights from backend API
+        const response = await fetch('http://localhost:8000/generate-insights', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ summary })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to generate insights: ${response.statusText}`);
+        }
+
+        const result = await response.json();
         
-        // Get insights from Gemini
-        const insights = await geminiService!.generateInsights(summary);
+        // Parse markdown bullet points into array
+        const insightsArray = result.insights
+            .split('\n')
+            .filter((line: string) => line.trim().startsWith('-') || line.trim().startsWith('*'))
+            .map((line: string) => line.replace(/^[\s-*]+/, '').trim())
+            .filter((line: string) => line.length > 0);
         
         // Display insights
-        displayInsights(insights);
+        displayInsights(insightsArray);
         
     } catch (error: any) {
         console.error('Analysis error:', error);
@@ -1279,28 +1284,41 @@ async function sendMessage() {
         chatInput.style.height = 'auto'; // Reset height after sending
         sendChatBtn.disabled = true;
 
-        initGeminiService();
-
         // Prepare data context if not already set
+        let context = '';
         if (!currentJsonData) {
             currentJsonData = JSON.parse(jsonInput.value);
             const analyzer = new DataAnalyzer(currentJsonData);
             analyzer.analyze();
-            const summary = analyzer.generateSummary();
-            geminiService!.setDataContext(summary);
+            context = analyzer.generateSummary();
         }
 
         // Show loading with proper structure
         const loadingId = addChatMessage('ai', 'typing');
 
-        // Get AI response
-        const response = await geminiService!.chat(message);
+        // Get AI response from backend
+        const response = await fetch('http://localhost:8000/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                message,
+                context: context || undefined
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to get response: ${response.statusText}`);
+        }
+
+        const result = await response.json();
 
         // Remove loading and add real response
         const loadingMsg = document.getElementById(loadingId);
         if (loadingMsg) loadingMsg.remove();
         
-        addChatMessage('ai', response);
+        addChatMessage('ai', result.response);
         
         // Generate and show suggested questions
         showSuggestedQuestions();

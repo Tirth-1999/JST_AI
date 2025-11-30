@@ -18,9 +18,6 @@ build/
 .env
 backend/.env
 
-# API Keys (IMPORTANT: Never commit API keys)
-src/geminiConfig.ts
-
 # Database
 backend/*.db
 backend/*.db-journal
