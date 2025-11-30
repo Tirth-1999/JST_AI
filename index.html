@@ -14,11 +14,32 @@
             <div class="header-content">
                 <div class="header-left">
                     <img src="/image.png" alt="JST Logo" class="app-logo">
+                    <h1 class="app-title">JSON TO TOON</h1>
                 </div>
                 <div class="header-center">
-                    <h1 class="app-title">JSON to TOON Tool</h1>
+                    <!-- Tab Navigation (shown only for authenticated users) -->
+                    <div class="tabs-wrapper" id="tabsWrapper">
+                        <button class="tab-button active" data-tab="converter">
+                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                            </svg>
+                            <span class="tab-text">Converter</span>
+                        </button>
+                        <button class="tab-button" data-tab="ability">
+                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.002z"/>
+                            </svg>
+                            <span class="ability-badge">AI</span>
+                        </button>
+                    </div>
                 </div>
                 <div class="header-actions">
+                    <!-- Hamburger Menu (Mobile/Tablet only) -->
+                    <button id="mobileMenuToggle" class="mobile-menu-btn" aria-label="Menu">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
                     <!-- User Profile or Sign In -->
                     <div id="userSection" class="user-section">
                         <!-- Sign in button (shown when not logged in) -->
@@ -34,9 +55,19 @@
                         
                         <!-- User profile (shown when logged in) -->
                         <div id="userProfile" class="user-profile" style="display: none;">
-                            <img id="userAvatar" class="user-avatar" alt="User" />
-                            <span id="userName" class="user-name"></span>
-                            <button id="logoutBtn" class="header-btn logout-btn">Logout</button>
+                            <div class="user-info-wrapper">
+                                <img id="userAvatar" class="user-avatar" alt="User" />
+                                <span id="userName" class="user-name"></span>
+                            </div>
+                            <!-- User Dropdown Menu -->
+                            <div class="user-dropdown" id="userDropdown">
+                                <button id="dropdownLogoutBtn" class="dropdown-menu-item logout-item">
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd"/>
+                                    </svg>
+                                    Logout
+                                </button>
+                            </div>
                         </div>
                     </div>
                     
@@ -65,13 +96,81 @@
             </div>
         </header>
 
+        <!-- Mobile Menu Dropdown -->
+        <div class="mobile-menu-dropdown" id="mobileMenuDropdown">
+            <button class="mobile-menu-item" id="mobileFaqBtn">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
+                </svg>
+                FAQ
+            </button>
+            <button class="mobile-menu-item" id="mobileContactBtn">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
+                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+                </svg>
+                Contact
+            </button>
+        </div>
+
+        <!-- Authentication Lock Overlay -->
+        <div class="auth-lock-overlay" id="authLockOverlay">
+            <div class="auth-lock-content">
+                <div class="lock-icon-wrapper">
+                    <svg class="lock-icon" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <div class="lock-pulse"></div>
+                </div>
+                <h2 class="lock-title">Sign In Required</h2>
+                <p class="lock-description">Access premium features by signing in with your Google account</p>
+                <div class="lock-features">
+                    <div class="lock-feature-item">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                        <span>JSON to TOON Converter</span>
+                    </div>
+                    <div class="lock-feature-item">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                        <span>AI-Powered Data Analysis</span>
+                    </div>
+                    <div class="lock-feature-item">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                        <span>Advanced Insights & Recommendations</span>
+                    </div>
+                </div>
+                <button id="lockOverlaySignIn" class="lock-signin-btn">
+                    <svg class="google-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    </svg>
+                    Sign in with Google
+                </button>
+                <button id="closeLockOverlay" class="lock-close-btn">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
         <!-- Main Content -->
         <main class="main-content">
+            <!-- Converter Tab Content -->
+            <div class="tab-content active" id="converterTab">
             <div class="editor-grid">
                 <!-- JSON Input -->
                 <div class="editor-panel">
                     <div class="panel-header">
-                        <span class="panel-title">JSON (JavaScript Object Notation) Input</span>
+                        <span class="panel-title">JSON (JavaScript Object Notation)</span>
                         <div class="panel-actions">
                             <input type="file" id="fileInput" accept=".json,.csv,.xlsx" style="display: none;">
                             <button id="uploadBtn" class="btn-ghost" title="Upload JSON, CSV, or XLSX file">
@@ -172,6 +271,80 @@
                     <span class="metric-value" id="reductionPercent">0%</span>
                 </div>
             </div>
+            </div>
+            <!-- End Converter Tab -->
+
+            <!-- Ability Mode Tab Content -->
+            <div class="tab-content" id="abilityTab">
+                <div class="ability-mode-container">
+                    <!-- Lab Section -->
+                    <div class="ability-section">
+                        <div class="ability-header">
+                            <h2 class="ability-title">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                </svg>
+                                AI-Powered Data Analysis
+                            </h2>
+                            <p class="ability-subtitle">Your data from the converter is automatically available here for AI analysis</p>
+                        </div>
+
+                        <!-- Sub-tabs for Lab and Chat -->
+                        <div class="ability-tabs">
+                            <button class="ability-tab-btn active" data-ability-tab="lab">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                                </svg>
+                                Lab
+                            </button>
+                            <button class="ability-tab-btn" data-ability-tab="chat">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                </svg>
+                                Chat
+                            </button>
+                        </div>
+
+                        <!-- Lab Tab Content -->
+                        <div class="ability-tab-content active" id="labContent">
+                            <button id="analyzeBtn" class="btn-analyze">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                Generate AI Insights
+                            </button>
+                            <div id="insightsContainer" class="insights-container"></div>
+                        </div>
+
+                        <!-- Chat Tab Content -->
+                        <div class="ability-tab-content" id="chatContent">
+                            <div class="chat-container">
+                                <div class="chat-messages-wrapper">
+                                    <div id="chatMessages" class="chat-messages"></div>
+                                    <div id="suggestedQuestions" class="suggested-questions" style="display: none;"></div>
+                                </div>
+                                <div class="chat-input-container">
+                                    <div class="chat-input-wrapper">
+                                        <textarea id="chatInput" placeholder="Ask anything about your data..." rows="1"></textarea>
+                                        <button id="sendChatBtn" class="btn-send" title="Send message">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div class="chat-input-hint">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                        </svg>
+                                        Press Enter to send, Shift+Enter for new line
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- End Ability Mode Tab -->
         </main>
 
         <!-- FAQ Slide Panel -->
@@ -217,6 +390,34 @@
                     <div class="faq-item">
                         <h3 class="faq-question">How do I download my converted files?</h3>
                         <p class="faq-answer">Sign in with Google to unlock the download feature. Once signed in, you'll see the download button enabled after each conversion, allowing you to save results as .txt files.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3 class="faq-question">What is Ability Mode (AI Mode)?</h3>
+                        <p class="faq-answer">Ability Mode is our new AI-powered tab that provides intelligent data analysis and insights. It features Gemini AI integration for natural language queries about your data, smart data visualization, and advanced analytics. This feature requires Google sign-in to access.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3 class="faq-question">How do I access AI Mode?</h3>
+                        <p class="faq-answer">The AI Mode tab is visible to everyone in the header (marked with a lightbulb icon and "AI" badge). However, you must sign in with Google to use it. If you're not logged in and click the AI tab, you'll see a lock screen prompting you to sign in first.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3 class="faq-question">What happens if I logout while using AI Mode?</h3>
+                        <p class="faq-answer">For seamless navigation, if you log out while on the AI Mode tab, you'll be automatically redirected to the Converter tab. This ensures you always have access to features that don't require authentication.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3 class="faq-question">Can I switch between tabs freely?</h3>
+                        <p class="faq-answer">Yes! Both tabs (Converter and AI Mode) are always visible in the header. The Converter tab is accessible to everyone, while the AI Mode shows a beautiful lock overlay with feature information if you're not signed in. Simply click "Sign In" on the lock screen to unlock AI features.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3 class="faq-question">Does the app support dark and light themes?</h3>
+                        <p class="faq-answer">Absolutely! Click the theme toggle button (sun/moon icon) in the header to switch between dark and light modes. Your preference is saved automatically and will be remembered for future visits. The interface is fully optimized for both themes with smooth transitions.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3 class="faq-question">Is the interface responsive on all devices?</h3>
+                        <p class="faq-answer">Yes! We've implemented comprehensive responsive breakpoints (mobile ≤640px, large mobile ≤768px, tablet ≤1024px, desktop >1024px). The header adapts beautifully across all screen sizes with optimized layouts, icon sizing, and navigation patterns for each device type.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3 class="faq-question">What are the new tab animations?</h3>
+                        <p class="faq-answer">We've introduced a smooth "sliding door" animation when switching between tabs. A purple gradient background slides behind the active tab with a 0.6s cubic-bezier transition, providing visual feedback and enhancing the modern UI experience.</p>
                     </div>
                 </div>
             </div>
@@ -279,6 +480,47 @@
 
         <!-- Panel Overlay -->
         <div class="panel-overlay" id="panelOverlay"></div>
+
+        <!-- Ability Mode Consent Modal -->
+        <div class="modal-overlay" id="abilityModeModal" style="display: none;">
+            <div class="modal-content ability-mode-consent">
+                <div class="modal-header">
+                    <h2>🚀 Enable Ability Mode</h2>
+                    <button class="modal-close" id="closeAbilityModal" aria-label="Close">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="ai-feature-icon">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                    </div>
+                    <h3>Interact with Your Data Using AI</h3>
+                    <p class="consent-description">
+                        Ability Mode enhances your experience with AI-powered features:
+                    </p>
+                    <ul class="feature-list">
+                        <li>📊 Auto-generated data visualizations and insights</li>
+                        <li>💬 Chat with your data - ask questions in natural language</li>
+                        <li>🔍 Advanced statistical analysis and computations</li>
+                        <li>🤖 Powered by Google Gemini AI</li>
+                    </ul>
+                    <div class="consent-warning">
+                        <strong>⚠️ Data Processing Notice:</strong>
+                        <p>Your data will be processed by Google Gemini AI to provide intelligent insights. We do not store your data permanently.</p>
+                    </div>
+                    <div class="consent-checkbox">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="abilityModeConsent">
+                            <span>I understand and consent to AI-powered data processing</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" id="cancelAbilityMode">Cancel</button>
+                    <button class="btn-primary" id="confirmAbilityMode" disabled>Enable Ability Mode</button>
+                </div>
+            </div>
+        </div>
 
         <!-- Footer -->
         <footer class="app-footer">

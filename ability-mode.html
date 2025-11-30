@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ability Mode - JST AI</title>
+    <link rel="stylesheet" href="/src/styles.css">
+    <link rel="stylesheet" href="/src/ability-mode.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body data-mode="ability">
+    <div class="app-container ability-mode-container">
+        <!-- Header -->
+        <header class="app-header ability-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <button id="backToMain" class="back-btn" title="Back to Main">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                        </svg>
+                    </button>
+                    <img src="/image.png" alt="JST Logo" class="app-logo">
+                    <div class="mode-indicator">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <span>Ability Mode</span>
+                    </div>
+                </div>
+                <div class="header-center">
+                    <h1 class="app-title">AI-Powered Data Lab</h1>
+                </div>
+                <div class="header-actions">
+                    <div id="userSection" class="user-section">
+                        <div id="userProfile" class="user-profile">
+                            <img id="userAvatar" class="user-avatar" alt="User" />
+                            <span id="userName" class="user-name"></span>
+                        </div>
+                    </div>
+                    <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">
+                        <svg class="sun-icon" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"/>
+                        </svg>
+                        <svg class="moon-icon" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content ability-main">
+            <!-- Data Input Section -->
+            <div class="data-input-section">
+                <div class="panel-header">
+                    <span class="panel-title">📊 Your Data</span>
+                    <div class="panel-actions">
+                        <button id="uploadDataBtn" class="btn-ghost" title="Upload new data">
+                            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            Upload
+                        </button>
+                        <button id="analyzeDataBtn" class="btn-primary" disabled>
+                            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                                <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
+                            </svg>
+                            Analyze with AI
+                        </button>
+                    </div>
+                </div>
+                <div class="data-preview">
+                    <textarea id="dataInput" class="data-textarea" placeholder="Paste your JSON data here or upload a file...&#10;&#10;Example:&#10;[&#10;  {&#34;name&#34;: &#34;Product A&#34;, &#34;price&#34;: 99.99, &#34;stock&#34;: 50},&#10;  {&#34;name&#34;: &#34;Product B&#34;, &#34;price&#34;: 149.99, &#34;stock&#34;: 30}&#10;]"></textarea>
+                    <div class="data-stats" id="dataStats" style="display: none;">
+                        <div class="stat-item">
+                            <span class="stat-label">Rows:</span>
+                            <span class="stat-value" id="rowCount">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Columns:</span>
+                            <span class="stat-value" id="colCount">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Status:</span>
+                            <span class="stat-value stat-ready" id="dataStatus">Ready</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section with Tabs -->
+            <div class="results-section">
+                <div class="tabs-container">
+                    <div class="tabs-header">
+                        <button class="tab-btn active" data-tab="lab">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                            </svg>
+                            Lab
+                        </button>
+                        <button class="tab-btn" data-tab="chat">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                            </svg>
+                            Chat
+                        </button>
+                        <div class="tab-indicator"></div>
+                    </div>
+
+                    <!-- Lab Tab Content -->
+                    <div class="tab-content active" id="labTab">
+                        <div class="lab-content">
+                            <div class="lab-placeholder">
+                                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                                </svg>
+                                <h3>AI-Generated Insights</h3>
+                                <p>Upload data and click "Analyze with AI" to see auto-generated visualizations and statistical insights.</p>
+                            </div>
+                            <div class="lab-results" id="labResults" style="display: none;">
+                                <!-- Stats Overview -->
+                                <div class="stats-overview" id="statsOverview"></div>
+                                <!-- Visualizations -->
+                                <div class="visualizations" id="visualizations"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chat Tab Content -->
+                    <div class="tab-content" id="chatTab">
+                        <div class="chat-container">
+                            <div class="chat-messages" id="chatMessages">
+                                <div class="chat-welcome">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                                    </svg>
+                                    <h3>Chat with Your Data</h3>
+                                    <p>Ask me anything about your data!</p>
+                                    <div class="example-queries">
+                                        <p><strong>Try asking:</strong></p>
+                                        <button class="query-suggestion">"How many rows have null values?"</button>
+                                        <button class="query-suggestion">"What's the average of column X?"</button>
+                                        <button class="query-suggestion">"Show me summary statistics"</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="chat-input-container">
+                                <textarea id="chatInput" class="chat-input" placeholder="Ask a question about your data..." rows="1"></textarea>
+                                <button id="sendChatBtn" class="send-btn" disabled>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+                <p id="loadingText">Processing with AI...</p>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="dataFileInput" accept=".json,.csv" style="display: none;">
+    
+    <script type="module" src="/src/ability-mode.ts"></script>
+</body>
+</html>

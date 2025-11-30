@@ -312,9 +312,68 @@ faqClose.addEventListener('click', () => closePanel(faqPanel));
 contactClose.addEventListener('click', () => closePanel(contactPanel));
 panelOverlay.addEventListener('click', closeAllPanels);
 
-viewToggleBtn.addEventListener('click', toggleView);
+// Mobile menu toggle
+const mobileMenuToggle = document.getElementById('mobileMenuToggle') as HTMLButtonElement;
+const mobileMenuDropdown = document.getElementById('mobileMenuDropdown') as HTMLDivElement;
+const mobileFaqBtn = document.getElementById('mobileFaqBtn') as HTMLButtonElement;
+const mobileContactBtn = document.getElementById('mobileContactBtn') as HTMLButtonElement;
 
-jsonInput.addEventListener('input', () => {
+if (mobileMenuToggle && mobileMenuDropdown) {
+    mobileMenuToggle.addEventListener('click', () => {
+        mobileMenuDropdown.classList.toggle('show');
+    });
+
+    // Close mobile menu when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!mobileMenuToggle.contains(e.target as Node) && !mobileMenuDropdown.contains(e.target as Node)) {
+            mobileMenuDropdown.classList.remove('show');
+        }
+    });
+
+    // Mobile menu item handlers
+    if (mobileFaqBtn) {
+        mobileFaqBtn.addEventListener('click', () => {
+            mobileMenuDropdown.classList.remove('show');
+            openPanel(faqPanel);
+        });
+    }
+
+    if (mobileContactBtn) {
+        mobileContactBtn.addEventListener('click', () => {
+            mobileMenuDropdown.classList.remove('show');
+            openPanel(contactPanel);
+        });
+    }
+}
+
+// User dropdown toggle
+const userInfoWrapper = document.querySelector('.user-info-wrapper') as HTMLElement;
+const userDropdown = document.getElementById('userDropdown') as HTMLDivElement;
+const dropdownLogoutBtn = document.getElementById('dropdownLogoutBtn') as HTMLButtonElement;
+
+if (userInfoWrapper && userDropdown) {
+    userInfoWrapper.addEventListener('click', (e) => {
+        e.stopPropagation();
+        userDropdown.classList.toggle('show');
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!userInfoWrapper.contains(e.target as Node) && !userDropdown.contains(e.target as Node)) {
+            userDropdown.classList.remove('show');
+        }
+    });
+
+    // Logout button handler
+    if (dropdownLogoutBtn) {
+        dropdownLogoutBtn.addEventListener('click', async () => {
+            userDropdown.classList.remove('show');
+            await authService.logout();
+        });
+    }
+}
+
+viewToggleBtn.addEventListener('click', toggleView);jsonInput.addEventListener('input', () => {
     const lines = jsonInput.value.split('\n').length;
     updateLineNumbers(jsonLineNumbers, lines);
 });
@@ -550,7 +609,10 @@ function escapeHtml(text: string): string {
 
 function highlightTOON(toonText: string): string {
     const lines = toonText.split('\n');
-    const colors = [
+    
+    // Use darker colors in light theme for better visibility
+    const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
+    const colors = isDarkTheme ? [
         '#4ec9b0', // cyan/teal
         '#dcdcaa', // yellow
         '#ce9178', // orange
@@ -558,6 +620,14 @@ function highlightTOON(toonText: string): string {
         '#c586c0', // purple
         '#569cd6', // blue
         '#b5cea8', // light green
+    ] : [
+        '#0d9488', // dark teal
+        '#ca8a04', // dark yellow/gold
+        '#ea580c', // dark orange
+        '#0284c7', // dark blue
+        '#9333ea', // dark purple
+        '#2563eb', // darker blue
+        '#16a34a', // dark green
     ];
 
     return lines.map(line => {
@@ -818,6 +888,84 @@ if (logoutBtn) {
     });
 }
 
+// Ability Mode Modal Handling
+const abilityModeBtn = document.getElementById('abilityModeBtn');
+const abilityModeModal = document.getElementById('abilityModeModal');
+const closeAbilityModal = document.getElementById('closeAbilityModal');
+const cancelAbilityMode = document.getElementById('cancelAbilityMode');
+const confirmAbilityMode = document.getElementById('confirmAbilityMode') as HTMLButtonElement;
+const abilityModeConsent = document.getElementById('abilityModeConsent') as HTMLInputElement;
+
+if (abilityModeBtn) {
+    abilityModeBtn.addEventListener('click', () => {
+        if (abilityModeModal) abilityModeModal.style.display = 'flex';
+    });
+}
+
+if (closeAbilityModal) {
+    closeAbilityModal.addEventListener('click', () => {
+        if (abilityModeModal) abilityModeModal.style.display = 'none';
+    });
+}
+
+if (cancelAbilityMode) {
+    cancelAbilityMode.addEventListener('click', () => {
+        if (abilityModeModal) abilityModeModal.style.display = 'none';
+        if (abilityModeConsent) abilityModeConsent.checked = false;
+    });
+}
+
+if (abilityModeConsent) {
+    abilityModeConsent.addEventListener('change', () => {
+        if (confirmAbilityMode) {
+            confirmAbilityMode.disabled = !abilityModeConsent.checked;
+        }
+    });
+}
+
+if (confirmAbilityMode) {
+    confirmAbilityMode.addEventListener('click', () => {
+        if (abilityModeConsent && abilityModeConsent.checked) {
+            // Store consent for permanent and session
+            localStorage.setItem('ability_mode_consent', 'true');
+            sessionStorage.setItem('ability_mode_session_consent', 'true');
+            
+            // Close modal
+            if (abilityModeModal) {
+                abilityModeModal.style.display = 'none';
+            }
+            
+            // Switch to Ability Mode tab
+            const abilityTabButton = document.querySelector('[data-tab=\"ability\"]') as HTMLButtonElement;
+            const converterTab = document.getElementById('converterTab');
+            const abilityTab = document.getElementById('abilityTab');
+            
+            if (abilityTabButton && converterTab && abilityTab) {
+                // Remove active from all tabs
+                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                
+                // Activate Ability Mode tab
+                abilityTabButton.classList.add('active');
+                abilityTab.classList.add('active');
+            }
+            
+            // Show tabs container
+            checkAbilityModeAccess();
+        }
+    });
+}
+
+// Close modal on outside click
+if (abilityModeModal) {
+    abilityModeModal.addEventListener('click', (e) => {
+        if (e.target === abilityModeModal) {
+            abilityModeModal.style.display = 'none';
+            if (abilityModeConsent) abilityModeConsent.checked = false;
+        }
+    });
+}
+
 // Handle window resize to reset mobile state if needed
 window.addEventListener('resize', () => {
     // If window is resized to desktop view while in conversion-complete state
@@ -833,3 +981,496 @@ initAuth();
 updateLineNumbers(toonLineNumbers, 1);
 copyOutputBtn.disabled = true;
 downloadBtn.disabled = true;
+
+// ============================================
+// TAB SYSTEM & ABILITY MODE INTEGRATION
+// ============================================
+
+// Import ability mode functions
+import { GeminiService } from './geminiService';
+import { GEMINI_CONFIG } from './geminiConfig';
+import { DataAnalyzer } from './dataAnalysis';
+
+let geminiService: GeminiService | null = null;
+let currentJsonData: any = null;
+
+// Initialize Gemini service
+function initGeminiService() {
+    if (!geminiService) {
+        geminiService = new GeminiService(GEMINI_CONFIG);
+    }
+}
+
+// Tab switching
+const tabButtons = document.querySelectorAll('.tab-button');
+const tabContents = document.querySelectorAll('.tab-content');
+const tabsWrapper = document.querySelector('.tabs-wrapper') as HTMLElement;
+const authLockOverlay = document.getElementById('authLockOverlay') as HTMLDivElement;
+const lockOverlaySignIn = document.getElementById('lockOverlaySignIn') as HTMLButtonElement;
+const closeLockOverlay = document.getElementById('closeLockOverlay') as HTMLButtonElement;
+
+// Function to show auth lock overlay
+function showAuthLockOverlay() {
+    if (authLockOverlay) {
+        authLockOverlay.classList.add('show');
+    }
+}
+
+// Function to hide auth lock overlay
+function hideAuthLockOverlay() {
+    if (authLockOverlay) {
+        authLockOverlay.classList.remove('show');
+    }
+}
+
+// Close lock overlay handlers
+if (closeLockOverlay) {
+    closeLockOverlay.addEventListener('click', hideAuthLockOverlay);
+}
+
+if (authLockOverlay) {
+    authLockOverlay.addEventListener('click', (e) => {
+        if (e.target === authLockOverlay) {
+            hideAuthLockOverlay();
+        }
+    });
+}
+
+// Lock overlay sign in button
+if (lockOverlaySignIn) {
+    lockOverlaySignIn.addEventListener('click', () => {
+        hideAuthLockOverlay();
+        // Trigger the main Google sign-in button
+        const googleSignInBtn = document.getElementById('googleSignInBtn');
+        if (googleSignInBtn) {
+            googleSignInBtn.click();
+        }
+    });
+}
+
+// Function to update sliding background position
+function updateSlidingBackground(activeButton: Element) {
+    if (!tabsWrapper) return;
+    
+    const buttonRect = activeButton.getBoundingClientRect();
+    const wrapperRect = tabsWrapper.getBoundingClientRect();
+    const leftPosition = buttonRect.left - wrapperRect.left;
+    const width = buttonRect.width;
+    
+    tabsWrapper.style.setProperty('--slider-left', `${leftPosition}px`);
+    tabsWrapper.style.setProperty('--slider-width', `${width}px`);
+}
+
+// Initialize slider position on first active button
+const initialActiveButton = document.querySelector('.tab-button.active');
+if (initialActiveButton) {
+    updateSlidingBackground(initialActiveButton);
+}
+
+// Update slider position on window resize
+let resizeTimeout: NodeJS.Timeout;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+        const activeButton = document.querySelector('.tab-button.active');
+        if (activeButton) {
+            updateSlidingBackground(activeButton);
+        }
+    }, 100);
+});
+
+tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+        // Check if user is authenticated
+        const isAuthenticated = authService.isAuthenticated();
+        
+        if (!isAuthenticated) {
+            // Show lock overlay if not authenticated
+            showAuthLockOverlay();
+            return;
+        }
+        
+        const tabName = button.getAttribute('data-tab');
+        
+        // Check if clicking Ability Mode tab
+        if (tabName === 'ability') {
+            // Check if user has given consent for this session
+            const sessionConsent = sessionStorage.getItem('ability_mode_session_consent');
+            const permanentConsent = localStorage.getItem('ability_mode_consent');
+            
+            if (!sessionConsent && permanentConsent !== 'true') {
+                // Show consent modal
+                const abilityModeModal = document.getElementById('abilityModeModal');
+                if (abilityModeModal) {
+                    abilityModeModal.style.display = 'flex';
+                }
+                return; // Don't switch tabs yet
+            }
+        }
+        
+        // Remove active from all tabs
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+        tabContents.forEach(content => content.classList.remove('active'));
+        
+        // Add active to clicked tab
+        button.classList.add('active');
+        
+        // Update sliding background
+        updateSlidingBackground(button);
+        
+        const targetTab = document.getElementById(`${tabName}Tab`);
+        if (targetTab) {
+            targetTab.classList.add('active');
+        }
+    });
+});
+
+// Ability Mode sub-tabs
+const abilityTabBtns = document.querySelectorAll('.ability-tab-btn');
+const abilityTabContents = document.querySelectorAll('.ability-tab-content');
+
+abilityTabBtns.forEach(button => {
+    button.addEventListener('click', () => {
+        const tabName = button.getAttribute('data-ability-tab');
+        
+        abilityTabBtns.forEach(btn => btn.classList.remove('active'));
+        abilityTabContents.forEach(content => content.classList.remove('active'));
+        
+        button.classList.add('active');
+        const targetContent = document.getElementById(`${tabName}Content`);
+        if (targetContent) {
+            targetContent.classList.add('active');
+        }
+    });
+});
+
+// Analyze button
+const analyzeBtn = document.getElementById('analyzeBtn') as HTMLButtonElement;
+const insightsContainer = document.getElementById('insightsContainer') as HTMLDivElement;
+
+analyzeBtn?.addEventListener('click', async () => {
+    if (!jsonInput.value.trim()) {
+        showError('Please enter some data in the converter first');
+        return;
+    }
+
+    try {
+        analyzeBtn.disabled = true;
+        analyzeBtn.innerHTML = `
+            <div class="loading-dots">
+                <span></span><span></span><span></span>
+            </div>
+            Analyzing...
+        `;
+
+        initGeminiService();
+        
+        // Parse JSON data
+        const data = JSON.parse(jsonInput.value);
+        currentJsonData = data;
+        
+        // Analyze data
+        const analyzer = new DataAnalyzer(data);
+        analyzer.analyze();
+        const summary = analyzer.generateSummary();
+        
+        geminiService!.setDataContext(summary);
+        
+        // Get insights from Gemini
+        const insights = await geminiService!.generateInsights(summary);
+        
+        // Display insights
+        displayInsights(insights);
+        
+    } catch (error: any) {
+        console.error('Analysis error:', error);
+        showError(error.message || 'Analysis failed');
+        insightsContainer.innerHTML = `
+            <div class="insight-card" style="border-color: var(--error-border); background: var(--error-bg);">
+                <p style="color: var(--error-text);">❌ ${error.message || 'Failed to analyze data. Please try again.'}</p>
+            </div>
+        `;
+    } finally {
+        analyzeBtn.disabled = false;
+        analyzeBtn.innerHTML = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            Generate AI Insights
+        `;
+    }
+});
+
+function displayInsights(insights: string[]) {
+    insightsContainer.innerHTML = '';
+    
+    insights.forEach((insight, index) => {
+        const card = document.createElement('div');
+        card.className = 'insight-card';
+        card.style.animationDelay = `${index * 0.1}s`;
+        card.innerHTML = `
+            <div class="insight-header">
+                <div class="insight-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                </div>
+                <h3>Insight ${index + 1}</h3>
+            </div>
+            <div class="insight-content">${formatMarkdown(insight)}</div>
+        `;
+        insightsContainer.appendChild(card);
+    });
+}
+
+// Chat functionality
+const chatMessages = document.getElementById('chatMessages') as HTMLDivElement;
+const chatInput = document.getElementById('chatInput') as HTMLTextAreaElement;
+const sendChatBtn = document.getElementById('sendChatBtn') as HTMLButtonElement;
+
+// Auto-resize textarea
+function autoResizeTextarea() {
+    if (chatInput) {
+        chatInput.style.height = 'auto';
+        chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+    }
+}
+
+chatInput?.addEventListener('input', autoResizeTextarea);
+
+sendChatBtn?.addEventListener('click', sendMessage);
+chatInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+});
+
+async function sendMessage() {
+    const message = chatInput.value.trim();
+    if (!message) return;
+
+    if (!jsonInput.value.trim()) {
+        showError('Please enter some data in the converter first');
+        return;
+    }
+
+    try {
+        // Add user message
+        addChatMessage('user', message);
+        chatInput.value = '';
+        chatInput.style.height = 'auto'; // Reset height after sending
+        sendChatBtn.disabled = true;
+
+        initGeminiService();
+
+        // Prepare data context if not already set
+        if (!currentJsonData) {
+            currentJsonData = JSON.parse(jsonInput.value);
+            const analyzer = new DataAnalyzer(currentJsonData);
+            analyzer.analyze();
+            const summary = analyzer.generateSummary();
+            geminiService!.setDataContext(summary);
+        }
+
+        // Show loading with proper structure
+        const loadingId = addChatMessage('ai', 'typing');
+
+        // Get AI response
+        const response = await geminiService!.chat(message);
+
+        // Remove loading and add real response
+        const loadingMsg = document.getElementById(loadingId);
+        if (loadingMsg) loadingMsg.remove();
+        
+        addChatMessage('ai', response);
+        
+        // Generate and show suggested questions
+        showSuggestedQuestions();
+
+    } catch (error: any) {
+        console.error('Chat error:', error);
+        showError(error.message || 'Chat failed');
+        addChatMessage('ai', `❌ Error: ${error.message || 'Failed to get response'}`);
+    } finally {
+        sendChatBtn.disabled = false;
+    }
+}
+
+function addChatMessage(role: 'user' | 'ai', content: string): string {
+    const messageId = `msg-${Date.now()}`;
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message ${role === 'user' ? 'user-message' : 'ai-message'}`;
+    messageDiv.id = messageId;
+    
+    const label = role === 'user' ? 'You' : 'AI Assistant';
+    const messageClass = role === 'user' ? 'message-user' : 'message-ai';
+    
+    // Get user avatar if logged in
+    const userAvatar = document.getElementById('userAvatar') as HTMLImageElement;
+    const userAvatarSrc = userAvatar?.src || '';
+    
+    const avatarHTML = role === 'user' 
+        ? (userAvatarSrc ? `<img src="${userAvatarSrc}" class="chat-avatar" alt="User" />` : `<div class="chat-avatar chat-avatar-default">${label.charAt(0)}</div>`)
+        : `<div class="chat-avatar chat-avatar-ai">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+          </div>`;
+    
+    // Handle loading state
+    const messageContent = content === 'typing' 
+        ? '<div class="loading-dots"><span></span><span></span><span></span></div>'
+        : formatMarkdown(content);
+    
+    messageDiv.innerHTML = `
+        ${role === 'ai' ? avatarHTML : ''}
+        <div class="${messageClass}">
+            <div class="message-label">${label}</div>
+            <div class="message-content">${messageContent}</div>
+        </div>
+        ${role === 'user' ? avatarHTML : ''}
+    `;
+    
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    return messageId;
+}
+
+function showSuggestedQuestions() {
+    const suggestedQuestionsDiv = document.getElementById('suggestedQuestions') as HTMLDivElement;
+    if (!suggestedQuestionsDiv || !currentJsonData) return;
+
+    // Generate contextual questions based on the data
+    const questions = generateSuggestedQuestions();
+    
+    if (questions.length === 0) {
+        suggestedQuestionsDiv.style.display = 'none';
+        return;
+    }
+
+    suggestedQuestionsDiv.innerHTML = `
+        <div class="suggested-questions-header">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Suggested questions
+        </div>
+        <div class="question-chips">
+            ${questions.map(q => `<button class="question-chip" data-question="${q.replace(/"/g, '&quot;')}">${q}</button>`).join('')}
+        </div>
+    `;
+
+    suggestedQuestionsDiv.style.display = 'block';
+
+    // Add click handlers
+    const chips = suggestedQuestionsDiv.querySelectorAll('.question-chip');
+    chips.forEach(chip => {
+        chip.addEventListener('click', () => {
+            const question = chip.getAttribute('data-question');
+            if (question && chatInput) {
+                chatInput.value = question;
+                chatInput.focus();
+                sendMessage();
+            }
+        });
+    });
+}
+
+function generateSuggestedQuestions(): string[] {
+    if (!currentJsonData) return [];
+
+    const questions: string[] = [];
+    
+    try {
+        // Get column names
+        const data = Array.isArray(currentJsonData) ? currentJsonData : [currentJsonData];
+        if (data.length === 0) return [];
+
+        const columns = Object.keys(data[0] || {});
+        const numericColumns = columns.filter(col => 
+            data.some(row => typeof row[col] === 'number')
+        );
+
+        // Generate contextual questions
+        if (numericColumns.length > 0) {
+            const col = numericColumns[0];
+            questions.push(`What is the average ${col}?`);
+            if (numericColumns.length > 1) {
+                questions.push(`Show correlation between ${numericColumns[0]} and ${numericColumns[1]}`);
+            }
+        }
+
+        if (columns.length > 0) {
+            questions.push(`What are the key patterns in this data?`);
+            questions.push(`Summarize the main findings`);
+        }
+
+        // Limit to 2 questions
+        return questions.slice(0, 2);
+    } catch (error) {
+        console.error('Error generating questions:', error);
+        return [];
+    }
+}
+
+function formatMarkdown(text: string): string {
+    let formatted = text;
+    
+    // Escape HTML first
+    formatted = formatted.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    
+    // Code blocks with language support
+    formatted = formatted.replace(/```(\w+)?\n([\s\S]*?)```/g, (_match, lang, code) => {
+        const language = lang ? `<span class="code-lang">${lang}</span>` : '';
+        return `<div class="code-block">${language}<pre><code>${code.trim()}</code></pre></div>`;
+    });
+    
+    // Column names and data fields (words in quotes or backticks)
+    formatted = formatted.replace(/['"`]([A-Za-z_][A-Za-z0-9_]*)['"`]/g, '<span class="highlight-column">$1</span>');
+    
+    // Numbers and percentages
+    formatted = formatted.replace(/\b(\d+(?:\.\d+)?%?)\b/g, '<span class="highlight-number">$1</span>');
+    
+    // Inline code
+    formatted = formatted.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+    
+    // Bold with gradient highlight for important terms
+    formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong class="text-emphasis">$1</strong>');
+    
+    // Italic
+    formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    
+    // Bullet points
+    formatted = formatted.replace(/^[•\-*]\s+(.+)$/gm, '<li class="bullet-item">$1</li>');
+    
+    // Numbered lists
+    formatted = formatted.replace(/^(\d+)\.\s+(.+)$/gm, '<li class="numbered-item"><span class="item-number">$1</span>$2</li>');
+    
+    // Wrap consecutive list items
+    formatted = formatted.replace(/(<li class="bullet-item">.*?<\/li>\n?)+/gs, '<ul class="insight-list">$&</ul>');
+    formatted = formatted.replace(/(<li class="numbered-item">.*?<\/li>\n?)+/gs, '<ol class="insight-list numbered">$&</ol>');
+    
+    // Key-value pairs (like "Key: Value")
+    formatted = formatted.replace(/^([A-Za-z][A-Za-z\s]+):\s*(.+)$/gm, '<div class="key-value"><span class="key">$1:</span> <span class="value">$2</span></div>');
+    
+    // Line breaks
+    formatted = formatted.replace(/\n/g, '<br>');
+    
+    return formatted;
+}
+
+// Show tabs always (lock overlay handles unauthenticated access)
+function checkAbilityModeAccess() {
+    const tabsWrapper = document.getElementById('tabsWrapper');
+    
+    if (tabsWrapper) {
+        // Always show tabs - lock overlay will handle authentication
+        tabsWrapper.style.display = 'inline-flex';
+    }
+}
+
+// Update ability mode access check
+setInterval(checkAbilityModeAccess, 1000);
+checkAbilityModeAccess();

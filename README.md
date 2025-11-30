@@ -8,6 +8,26 @@ A modern full-stack web application that converts JSON to TOON (Token Optimized 
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
 
+## 🆕 Recent Major Updates (November 2025)
+
+### Ability Mode (AI-Powered Analytics)
+- **NEW Tab**: Dedicated AI Mode for intelligent data analysis
+- **Gemini Integration**: Powered by Google's Gemini 2.5 Flash model
+- **Authentication Lock**: Elegant lock overlay for unauthenticated users with feature showcase
+- **Smart Consent System**: Session-based and permanent consent options
+
+### Enhanced UI/UX
+- **Sliding Door Animation**: Beautiful tab switching with animated purple gradient background
+- **Theme Toggle Redesign**: Consistent 40x40px sizing with sun/moon icons
+- **Responsive Header**: Improved breakpoints (640px, 768px, 1024px) with optimized layouts
+- **User Profile Simplification**: Avatar-only display, dropdown for logout
+- **Auto-Logout Navigation**: Automatic switch to Converter tab when logging out from AI Mode
+
+### Authentication Improvements
+- **Always-Visible Tabs**: Both tabs shown to all users, authentication handled via lock overlay
+- **Prevented Stuck States**: Users can't be trapped in AI Mode after logout
+- **Lock Screen Features**: Interactive overlay showing AI capabilities before sign-in
+
 ## ✨ Features
 
 ### Core Functionality
@@ -26,15 +46,28 @@ A modern full-stack web application that converts JSON to TOON (Token Optimized 
 - **Feature Gating**: Download functionality requires authentication, copy is always available
 - **Session Management**: Automatic clearing of results on login/logout for security
 
+### Ability Mode (AI Mode) - NEW!
+- **Gemini AI Integration**: Powered by Google's Gemini AI for intelligent data analysis
+- **Natural Language Queries**: Ask questions about your data in plain English
+- **Smart Analytics**: Advanced data insights and pattern recognition
+- **Authentication Lock Screen**: Beautiful glassmorphism overlay for unauthenticated users
+- **Consent Management**: Session-based and permanent consent options for AI features
+- **Seamless Tab Switching**: Automatic redirection to accessible content on logout
+
 ### UI/UX Excellence
 - **Modern Design**: Glassmorphism effects, gradient buttons, and smooth animations
-- **Dark/Light Theme**: Persistent theme toggle with system preference detection
-- **Responsive Breakpoints**: Optimized layouts for desktop (>1024px), tablet, and mobile (≤1024px)
+- **Dark/Light Theme**: Persistent theme toggle with system preference detection (sun/moon icons)
+- **Sliding Door Animation**: Smooth 0.6s cubic-bezier tab transitions with purple gradient background
+- **Responsive Breakpoints**: Enhanced layouts for mobile (≤640px), large mobile (≤768px), tablet (≤1024px), desktop (>1024px)
+- **Smart Authentication Flow**: Lock overlay prevents access to AI features while keeping tabs visible
+- **Auto-Logout Protection**: Users automatically switch to Converter tab when logging out from AI Mode
 - **Single-Column Mobile Mode**: Streamlined experience with step-by-step conversion flow
 - **Slide Panels**: Animated FAQ and Contact sections accessible from header
 - **Toast Notifications**: Success and error feedback with auto-dismiss
 - **Visual Indicators**: Lock icon on disabled download button with hover tooltip
-- **Mobile Optimized**: Icon-only header navigation, redo button for easy re-conversion
+- **Consistent Icon Sizing**: All header icons fixed at 40x40px across all breakpoints
+- **Mobile Optimized**: Icon-only header navigation, hamburger menu, redo button for easy re-conversion
+- **Window Resize Handling**: Tab animations recalculate positions dynamically on window resize
 
 ## 🚀 Quick Start
 
@@ -157,6 +190,21 @@ The built files will be in the `dist/` directory.
 3. Use the **Download** button to save results as `.txt` files
 4. Your session is secure with JWT tokens
 
+### Ability Mode (AI-Powered Analytics) 🤖
+1. **Access**: Click the **AI Mode** tab (lightbulb icon with "AI" badge) in the header
+2. **Authentication Required**: If not signed in, you'll see a lock screen - click "Sign In" to proceed
+3. **Consent**: First-time users see a consent modal explaining AI features and data usage
+4. **Upload Data**: Drag & drop or upload JSON, CSV, or XLSX files for AI analysis
+5. **Natural Language Queries**: Ask questions like:
+   - "What patterns do you see in this data?"
+   - "Summarize the key insights"
+   - "What are the top 5 categories by sales?"
+6. **AI Analysis**: Gemini AI processes your data and provides intelligent insights
+7. **Interactive Chat**: Continue the conversation to drill deeper into your data
+8. **Session Management**: Consent is saved per session or permanently based on your choice
+
+**Note**: Ability Mode features require Google sign-in. If you log out while on the AI tab, you'll automatically switch to the Converter tab.
+
 ### Mobile Experience (≤1024px screens)
 1. See only the JSON input initially
 2. After conversion, view TOON output in full screen
@@ -203,16 +251,18 @@ items[2]{id,value}
 ## 🛠️ Tech Stack
 
 ### Frontend
-- **TypeScript** - Type-safe JavaScript
-- **Vite** - Fast build tool with HMR
-- **Axios** - HTTP client for API calls
-- **Papa Parse** - CSV parsing
-- **XLSX** - Excel file handling
-- **Modern CSS** - Custom properties, animations, glassmorphism
+- **TypeScript** - Type-safe JavaScript with strict mode
+- **Vite** - Fast build tool with HMR and optimized production builds
+- **Axios** - HTTP client for API calls with interceptors
+- **Papa Parse** - High-performance CSV parsing
+- **XLSX** - Excel file handling (XLS, XLSX, CSV)
+- **Google Gemini AI SDK** - AI-powered data analysis and insights
+- **Modern CSS** - Custom properties, CSS Grid, Flexbox, animations, glassmorphism effects
+- **Google OAuth SDK** - Secure authentication flow
 
 ### Backend
-- **Python 3.14** - Core conversion logic
-- **FastAPI** - High-performance async API framework
+- **Python 3.14** - Core conversion logic and AI integration
+- **FastAPI** - High-performance async API framework with automatic API docs
 - **SQLAlchemy 2.0** - SQL toolkit and ORM
 - **SQLite** - Lightweight database
 - **Authlib** - OAuth 2.0 client
@@ -252,35 +302,6 @@ items[2]{id,value}
 - `GET /health` - Health check
 - `GET /` - API information
 
-## 📂 Project Structure
-
-```
-JST_AI/
-├── backend/
-│   ├── main.py              # FastAPI application
-│   ├── auth.py              # OAuth & JWT logic
-│   ├── models.py            # SQLAlchemy models
-│   ├── database.py          # Database configuration
-│   ├── toon_converter.py    # TOON conversion engine
-│   ├── requirements.txt     # Python dependencies
-│   ├── .env                 # Environment variables (not in git)
-│   └── jst_ai.db           # SQLite database (not in git)
-├── src/
-│   ├── main.ts             # Frontend application logic
-│   ├── auth.ts             # Authentication service
-│   ├── toonConverter.ts    # Client-side conversion
-│   ├── types.ts            # TypeScript types
-│   └── styles.css          # Modern CSS styling
-├── public/
-│   └── logo.svg            # Application logo
-├── index.html              # Main HTML
-├── image.png               # Logo image
-├── example.json            # Sample JSON file
-├── tsconfig.json           # TypeScript config
-├── package.json            # NPM dependencies
-├── .gitignore              # Git ignore rules
-└── README.md               # This file
-```
 
 ## 🗄️ Database Schema
 
@@ -309,25 +330,74 @@ JST_AI/
 
 ## 🔐 Security Features
 
-- Google OAuth 2.0 authentication
-- JWT tokens with expiration
-- HTTP-only session management
-- CORS protection
-- Environment variable protection
-- SQL injection prevention (SQLAlchemy ORM)
-- No password storage (OAuth only)
+- **Google OAuth 2.0** - Industry-standard authentication
+- **JWT Tokens** - Secure tokens with 7-day expiration (10,080 minutes)
+- **HTTP-Only Sessions** - Secure session management
+- **CORS Protection** - Cross-origin request security
+- **Environment Variables** - Sensitive data protection with .env files
+- **SQL Injection Prevention** - SQLAlchemy ORM with parameterized queries
+- **No Password Storage** - OAuth-only authentication (no credentials stored)
+- **Authentication Lock Overlay** - Prevents unauthorized access to AI features
+- **Auto-Logout Protection** - Automatic tab switching to prevent stuck states
+- **Consent Management** - User consent tracking for AI features (session & permanent)
+- **Secure API Keys** - Gemini API key stored server-side only
+- **Session Clearing** - Conversion results cleared on login/logout for privacy
 
 ## 🎨 Customization
 
 ### Theme Colors
-Edit CSS variables in `src/styles.css`:
+Edit CSS variables in `src/styles.css` for both dark and light themes:
 ```css
 :root {
-    --accent-primary: #0ea5e9;
-    --accent-secondary: #10b981;
-    --success-color: #4ec9b0;
+    --accent-primary: #0ea5e9;      /* Sky blue */
+    --accent-secondary: #10b981;    /* Emerald green */
+    --success-color: #4ec9b0;       /* Teal */
+    --purple-primary: #a855f7;      /* Tab animation gradient */
+    --purple-secondary: #ec4899;    /* Tab animation gradient end */
     /* ... more colors */
 }
+
+:root[data-theme="light"] {
+    --bg-primary: #ffffff;
+    --text-primary: #1e293b;
+    /* ... light theme overrides */
+}
+```
+
+### Tab Animation Timing
+Adjust sliding door animation in `src/styles.css`:
+```css
+.tabs-wrapper::before {
+    transition: all 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+    /* Change 0.6s to your preferred duration */
+}
+```
+
+### Responsive Breakpoints
+Modify breakpoints in `src/styles.css`:
+```css
+/* Mobile: ≤640px */
+@media (max-width: 640px) { /* ... */ }
+
+/* Large Mobile: 641-768px */
+@media (min-width: 641px) and (max-width: 768px) { /* ... */ }
+
+/* Tablet: 769-1024px */
+@media (min-width: 769px) and (max-width: 1024px) { /* ... */ }
+
+/* Desktop: >1024px */
+@media (min-width: 1025px) { /* ... */ }
+```
+
+### Gemini AI Configuration
+Update AI model settings in `src/geminiConfig.ts`:
+```typescript
+export const GEMINI_CONFIG = {
+    model: 'gemini-1.5-flash',  // or 'gemini-pro'
+    temperature: 0.7,
+    maxOutputTokens: 2048,
+    // ... more settings
+};
 ```
 
 ### Token Calculation
@@ -353,6 +423,39 @@ lsof -ti:5173 | xargs kill -9
 - Verify `GOOGLE_CLIENT_ID` matches in `.env` and `main.ts`
 - Check authorized origins in Google Console
 - Clear browser cache and cookies
+- Ensure redirect URIs are correctly configured
+
+**AI Mode / Ability Mode not accessible:**
+- Verify you're signed in with Google (look for your avatar in header)
+- Check that Gemini API key is set in `src/geminiConfig.ts`
+- Clear browser local storage and session storage, then reload
+- Check browser console for authentication errors
+
+**Tabs not visible or not switching:**
+- Ensure JavaScript is enabled in your browser
+- Check browser console for errors
+- Try hard refresh (Ctrl/Cmd + Shift + R)
+- Verify `src/main.ts` is properly compiled
+
+**Tab animation not smooth:**
+- Check if reduced motion is enabled in system settings
+- Try a different browser (Chrome/Firefox/Safari)
+- Clear browser cache and reload
+
+**Stuck in AI Mode after logout:**
+- This should be fixed automatically - you'll be redirected to Converter tab
+- If stuck, manually click the Converter tab
+- Clear session storage: `sessionStorage.clear()` in browser console
+
+**Theme toggle not working:**
+- Clear localStorage: `localStorage.removeItem('jst-theme')`
+- Check for JavaScript errors in console
+- Verify CSS variables are loaded in `src/styles.css`
+
+**Lock overlay won't dismiss:**
+- Click the "Sign In" button on the lock screen
+- If Google sign-in fails, check OAuth configuration
+- Try clearing cookies and cache
 
 **Database locked:**
 ```bash
@@ -361,29 +464,81 @@ rm jst_ai.db
 # Restart server (will recreate database)
 ```
 
+**Window resize breaks tab animation:**
+- The animation should recalculate automatically
+- If not, try switching tabs to trigger recalculation
+- Check browser console for JavaScript errors
+
 ## 📝 Development Notes
 
-- TypeScript strict mode enabled
-- FastAPI auto-reloads on file changes
-- Vite provides instant HMR
-- Database auto-creates on first run
-- JWT tokens expire after 7 days
-- CORS enabled for local development
+### Build Configuration
+- **TypeScript strict mode enabled** - Full type safety with `"strict": true`
+- **Vite HMR** - Instant hot module replacement during development
+- **FastAPI auto-reload** - Automatic server restart on Python file changes
+- **ES Modules** - Modern JavaScript module system with tree-shaking
+
+### Code Organization
+- **Modular architecture** - Separate files for auth, conversion, AI, styling
+- **Type definitions** - Centralized interfaces in `src/types.ts`
+- **Service layer pattern** - `authService` and `geminiService` for clean separation
+- **Event-driven UI** - Efficient DOM manipulation with event delegation
+
+### Performance Optimizations
+- **CSS animations** - Hardware-accelerated transforms for smooth transitions
+- **Debounced window resize** - Prevents excessive tab animation recalculations
+- **Lazy loading** - Gemini SDK loaded only when needed
+- **Minimal re-renders** - Strategic DOM updates to reduce paint operations
+
+### State Management
+- **localStorage** - Theme preference, permanent consent, JWT tokens
+- **sessionStorage** - Session-based consent, temporary state
+- **JWT tokens** - 7-day expiration (10,080 minutes)
+- **Auto-cleanup** - Conversion results cleared on auth state changes
+
+### Browser Compatibility
+- **Modern browsers** - Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
+- **CSS Grid & Flexbox** - Layout with fallbacks
+- **ES2020+ features** - Optional chaining, nullish coalescing
+- **Web APIs** - File API, Fetch API, LocalStorage API
+
+### Security Best Practices
+- **CORS enabled** for local development (`localhost:5173` ↔ `localhost:8000`)
+- **API keys** never exposed in client-side code (Gemini key server-side only)
+- **SQL injection prevention** - Parameterized queries via SQLAlchemy ORM
+- **XSS protection** - Sanitized user inputs and proper escaping
+- **HTTPS ready** - Production configuration supports secure connections
+
+### Database
+- **Auto-initialization** - Database created on first backend run
+- **Migration-ready** - Schema changes tracked for future migrations
+- **SQLite** - Zero-config development database
+- **Production-ready** - Easy PostgreSQL/MySQL migration path
 
 ## 🚀 Future Features
 
+### Recently Completed ✅
+- [x] Ability Mode (AI-powered analytics)
+- [x] Gemini AI integration
+- [x] Authentication lock overlay
+- [x] Sliding door tab animations
+- [x] Responsive header redesign
+- [x] Theme toggle improvements
+- [x] Auto-logout navigation protection
+
+### Planned Features
 - [ ] Conversion history page
 - [ ] Share conversions via links
 - [ ] Export conversion history
 - [ ] User dashboard with statistics
+- [ ] AI Mode: Multiple AI model support (Claude, GPT-4, etc.)
+- [ ] AI Mode: Data visualization charts and graphs
+- [ ] AI Mode: Export AI analysis reports
 - [ ] Rate limiting per user
 - [ ] API key generation for developers
 - [ ] Batch conversion support
 - [ ] Custom TOON format settings
-
-## 📄 License
-
-MIT License - see LICENSE file for details
+- [ ] Collaborative workspace features
+- [ ] Advanced analytics dashboard
 
 ## 👤 Author
 

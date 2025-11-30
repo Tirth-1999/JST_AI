@@ -120,14 +120,45 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
 
 @app.post("/auth/google/verify")
 async def google_verify(request: Request, db: Session = Depends(get_db)):
-    """Verify Google ID token from frontend"""
+    """Verify Google ID token from frontend or accept user info from OAuth"""
     try:
         body = await request.json()
+        print(f"Received auth request with body: {body}")
+        
         id_token = body.get("credential")
         
-        if not id_token:
-            raise HTTPException(status_code=400, detail="No credential provided")
+        # Check if we received user info directly (from OAuth2 token flow)
+        if not id_token and body.get("email"):
+            print(f"Received user info directly: {body.get('email')}")
+            # User info was sent directly from OAuth2 token flow
+            user = get_or_create_user(
+                db=db,
+                google_id=body.get('sub'),
+                email=body['email'],
+                name=body.get('name', ''),
+                picture=body.get('picture', '')
+            )
+            
+            # Create JWT token
+            access_token = create_access_token(data={"sub": user.id})
+            
+            return AuthResponse(
+                access_token=access_token,
+                token_type="bearer",
+                user=UserResponse(
+                    id=user.id,
+                    email=user.email,
+                    name=user.name,
+                    picture=user.picture,
+                    created_at=user.created_at.isoformat()
+                )
+            )
         
+        if not id_token:
+            print(f"ERROR: No credential or user info provided. Body keys: {body.keys()}")
+            raise HTTPException(status_code=400, detail="No credential or user info provided")
+        
+        print(f"Verifying Google ID token")
         # Verify the Google ID token
         async with httpx.AsyncClient() as client:
             response = await client.get(

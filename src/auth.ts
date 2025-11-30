@@ -19,6 +19,8 @@ interface AuthResponse {
 class AuthService {
     private token: string | null = null;
     private user: User | null = null;
+    private tokenClient: any = null;
+    private clientId: string = '';
 
     constructor() {
         // Load token from localStorage on init
@@ -40,25 +42,114 @@ class AuthService {
             return;
         }
 
-        // @ts-ignore - Google Identity Services
-        google.accounts.id.initialize({
-            client_id: clientId,
-            callback: this.handleGoogleCallback.bind(this),
-            auto_select: false,
-        });
+        this.clientId = clientId;
 
-        // Set up custom button click handler
-        this.setupCustomButton();
+        // Check if Google Identity Services is loaded
+        // @ts-ignore
+        if (typeof google === 'undefined' || !google.accounts) {
+            console.error('Google Identity Services not loaded');
+            // Retry after a short delay
+            setTimeout(() => this.initGoogleSignIn(clientId), 500);
+            return;
+        }
+
+        try {
+            // Initialize for ID token flow (for backend verification)
+            // @ts-ignore - Google Identity Services
+            google.accounts.id.initialize({
+                client_id: clientId,
+                callback: this.handleGoogleCallback.bind(this),
+                auto_select: false,
+            });
+
+            // Also initialize the OAuth2 token client for button clicks
+            // @ts-ignore
+            this.tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: clientId,
+                scope: 'email profile openid',
+                callback: async (response: any) => {
+                    console.log('OAuth token received:', response);
+                    if (response.access_token) {
+                        // Use the access token to get user info
+                        await this.getUserInfoWithToken(response.access_token);
+                    }
+                },
+            });
+
+            // Setup custom button click handler
+            this.setupCustomButton();
+            
+            console.log('Google Sign-In initialized successfully');
+        } catch (error) {
+            console.error('Failed to initialize Google Sign-In:', error);
+        }
+    }
+
+    // Get user info using OAuth access token
+    async getUserInfoWithToken(accessToken: string) {
+        try {
+            console.log('Fetching user info with access token');
+            // Get user info from Google
+            const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            });
+
+            const userInfo = await userInfoResponse.json();
+            console.log('User info received:', userInfo);
+
+            // Send to backend for verification and JWT creation
+            const payload = {
+                email: userInfo.email,
+                name: userInfo.name,
+                picture: userInfo.picture,
+                sub: userInfo.sub, // Google user ID
+            };
+            console.log('Sending to backend:', payload);
+            
+            const result = await axios.post<AuthResponse>(`${API_URL}/auth/google/verify`, payload);
+
+            this.token = result.data.access_token;
+            this.user = result.data.user;
+
+            // Store in localStorage
+            localStorage.setItem('jst_token', this.token);
+            localStorage.setItem('jst_user', JSON.stringify(this.user));
+
+            // Update UI
+            this.updateUI();
+            this.clearConversionResults();
+            this.showNotification('Successfully signed in!', 'success');
+        } catch (error: any) {
+            console.error('Failed to get user info:', error);
+            console.error('Error response:', error.response?.data);
+            this.showNotification('Sign-in failed. Please try again.', 'error');
+        }
     }
 
     // Setup custom Google Sign-In button
     setupCustomButton() {
-        const customButton = document.getElementById('googleSignInBtn');
-        if (!customButton) return;
+        const googleBtn = document.getElementById('googleSignInBtn');
+        if (!googleBtn) {
+            console.warn('Google sign-in button not found');
+            return;
+        }
 
-        customButton.addEventListener('click', () => {
-            // @ts-ignore
-            google.accounts.id.prompt();
+        googleBtn.addEventListener('click', () => {
+            console.log('Sign-in button clicked, requesting access token');
+            try {
+                // Use the token client to request access (this opens the popup)
+                if (this.tokenClient) {
+                    this.tokenClient.requestAccessToken();
+                } else {
+                    console.error('Token client not initialized');
+                    this.showNotification('Sign-in not ready. Please refresh the page.', 'error');
+                }
+            } catch (error) {
+                console.error('Error triggering Google Sign-In:', error);
+                this.showNotification('Sign-in error. Please check browser console.', 'error');
+            }
         });
     }
 
@@ -111,6 +202,40 @@ class AuthService {
         
         // Clear conversion results on logout
         this.clearConversionResults();
+        
+        // Switch to converter tab if on ability mode
+        const converterTab = document.querySelector('.tab-button[data-tab="converter"]') as HTMLElement;
+        const abilityTab = document.querySelector('.tab-button[data-tab="ability"]') as HTMLElement;
+        const converterContent = document.getElementById('converterTab');
+        const abilityContent = document.getElementById('abilityTab');
+        
+        if (abilityTab?.classList.contains('active')) {
+            // Remove active from ability tab
+            abilityTab.classList.remove('active');
+            if (abilityContent) {
+                abilityContent.classList.remove('active');
+            }
+            
+            // Add active to converter tab
+            if (converterTab) {
+                converterTab.classList.add('active');
+            }
+            if (converterContent) {
+                converterContent.classList.add('active');
+            }
+            
+            // Update sliding background if available
+            const tabsWrapper = document.querySelector('.tabs-wrapper') as HTMLElement;
+            if (tabsWrapper && converterTab) {
+                const buttonRect = converterTab.getBoundingClientRect();
+                const wrapperRect = tabsWrapper.getBoundingClientRect();
+                const leftPosition = buttonRect.left - wrapperRect.left;
+                const width = buttonRect.width;
+                
+                tabsWrapper.style.setProperty('--slider-left', `${leftPosition}px`);
+                tabsWrapper.style.setProperty('--slider-width', `${width}px`);
+            }
+        }
         
         this.updateUI();
         this.showNotification('Logged out successfully', 'success');
