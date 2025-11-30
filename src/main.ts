@@ -3,11 +3,15 @@ import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import type { ConversionMetrics, ConversionResponse } from './types';
 import authService from './auth';
+import { VisualizationManager } from './visualizations';
 
 const API_URL = 'http://localhost:8000';
 
 // Google Client ID - Replace with your actual client ID
 const GOOGLE_CLIENT_ID = '789204737622-np3cmr6pom7948uvhlc99uhud36mpgol.apps.googleusercontent.com';
+
+// Initialize Visualization Manager
+const visualizationManager = new VisualizationManager();
 
 // DOM Elements
 const jsonInput = document.getElementById('jsonInput') as HTMLTextAreaElement;
@@ -432,6 +436,19 @@ async function handleConvert(): Promise<void> {
 
         animateMetrics(metrics);
         copyOutputBtn.disabled = false;
+        
+        // Parse and store data for visualizations
+        try {
+            const parsedData = JSON.parse(jsonString);
+            if (Array.isArray(parsedData)) {
+                visualizationManager.setData(parsedData);
+            } else if (typeof parsedData === 'object' && parsedData !== null) {
+                // If it's a single object, wrap it in an array
+                visualizationManager.setData([parsedData]);
+            }
+        } catch (e) {
+            console.warn('Could not parse data for visualizations:', e);
+        }
         
         // Only enable download button if user is authenticated
         if (authService.isAuthenticated()) {

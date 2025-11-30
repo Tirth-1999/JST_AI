@@ -54,6 +54,17 @@ A modern full-stack web application that converts JSON to TOON (Token Optimized 
 - **Consent Management**: Session-based and permanent consent options for AI features
 - **Seamless Tab Switching**: Automatic redirection to accessible content on logout
 
+#### Sub-Tabs in AI Mode:
+1. **Lab**: Generate AI insights about your dataset with one click
+2. **Chat**: Interactive chat interface to ask questions about your data
+3. **Visualizations (NEW!)**: AI-powered exploratory data analysis (EDA)
+   - **Automatic Chart Generation**: AI recommends 4 appropriate visualizations
+   - **Smart Analysis**: Gemini analyzes your dataset structure and generates optimal charts
+   - **Interactive Charts**: Powered by Plotly for dynamic, responsive visualizations
+   - **Chart Types**: Bar charts, line plots, pie charts, and scatter plots
+   - **Code Execution**: Backend safely executes Python visualization code
+   - **Responsive Design**: Charts adapt to different screen sizes
+
 ### UI/UX Excellence
 - **Modern Design**: Glassmorphism effects, gradient buttons, and smooth animations
 - **Dark/Light Theme**: Persistent theme toggle with system preference detection (sun/moon icons)
@@ -256,6 +267,7 @@ items[2]{id,value}
 - **Axios** - HTTP client for API calls with interceptors
 - **Papa Parse** - High-performance CSV parsing
 - **XLSX** - Excel file handling (XLS, XLSX, CSV)
+- **Plotly.js** - Interactive data visualization library
 - **Google Gemini AI SDK** - AI-powered data analysis and insights
 - **Modern CSS** - Custom properties, CSS Grid, Flexbox, animations, glassmorphism effects
 - **Google OAuth SDK** - Secure authentication flow
@@ -270,6 +282,8 @@ items[2]{id,value}
 - **httpx** - Async HTTP client
 - **Pydantic** - Data validation
 - **Uvicorn** - ASGI server
+- **Plotly** - Python graphing library for visualization generation
+- **Pandas** - Data manipulation and analysis for chart data processing
 
 ## 📡 API Endpoints
 
@@ -293,6 +307,43 @@ items[2]{id,value}
       "toonTokens": 8,
       "tokensSaved": 7,
       "reductionPercent": "46.7"
+    }
+  }
+  ```
+
+### AI & Visualizations
+- `POST /generate-visualizations` - Generate AI-recommended visualizations
+  ```json
+  // Request
+  {"data": "[{\"name\":\"Alice\",\"age\":25},{\"name\":\"Bob\",\"age\":30}]"}
+  
+  // Response
+  {
+    "charts": [
+      {
+        "type": "bar",
+        "title": "Age Distribution",
+        "description": "Shows the distribution of ages",
+        "code": "import plotly.express as px\n..."
+      }
+    ]
+  }
+  ```
+
+- `POST /execute-visualization` - Execute visualization code and return Plotly JSON
+  ```json
+  // Request
+  {
+    "code": "import plotly.express as px\n...",
+    "data": [{"name": "Alice", "age": 25}]
+  }
+  
+  // Response
+  {
+    "success": true,
+    "data": {
+      "data": [...],
+      "layout": {...}
     }
   }
   ```

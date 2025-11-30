@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, EmailStr, ConfigDict
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from sqlalchemy.orm import Session
 import json
 import os
@@ -59,6 +59,21 @@ class ContactRequest(BaseModel):
 class ContactResponse(BaseModel):
     success: bool
     message: str
+
+
+class VisualizationRequest(BaseModel):
+    data: str  # JSON string of the data
+
+
+class ChartData(BaseModel):
+    type: str  # 'bar', 'line', 'pie', 'scatter'
+    title: str
+    description: str
+    code: str  # Python code to generate the chart
+
+
+class VisualizationResponse(BaseModel):
+    charts: List[ChartData]
 
 
 class UserResponse(BaseModel):
@@ -344,6 +359,191 @@ async def send_contact_email(request: ContactRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
+
+
+@app.post("/generate-visualizations", response_model=VisualizationResponse)
+async def generate_visualizations(request: VisualizationRequest):
+    """Generate visualization recommendations using Gemini AI"""
+    try:
+        # Validate JSON
+        try:
+            data = json.loads(request.data)
+        except json.JSONDecodeError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid JSON: {str(e)}")
+
+        # Prepare prompt for Gemini
+        prompt = f"""
+Generate 4 simple visualizations. Use proper pandas methods for aggregations.
+
+RULES:
+- Simple charts (bar/line/pie/scatter)
+- ONE clear insight per chart
+- For counts: use df['column'].value_counts()
+- For numeric data: use df directly
+- Always assign result to 'fig' variable
+- End with: fig.to_json()
+
+Data sample:
+{json.dumps(data[:2] if isinstance(data, list) and len(data) > 2 else data)}
+
+Columns: {list(data[0].keys()) if isinstance(data, list) and len(data) > 0 else 'N/A'}
+
+EXAMPLES:
+1. Count categories: df['Species'].value_counts().reset_index() then px.bar
+2. Numeric scatter: px.scatter(df, x='col1', y='col2')
+3. Simple line: px.line(df, x='date', y='value')
+
+Return JSON (no markdown):
+{{
+  "charts": [
+    {{
+      "type": "bar",
+      "title": "Short Title",
+      "description": "Brief insight.",
+      "code": "import plotly.express as px\\nimport pandas as pd\\ndf=pd.DataFrame(data)\\ncounts=df['col'].value_counts().reset_index()\\ncounts.columns=['col','count']\\nfig=px.bar(counts,x='col',y='count',title='Title')\\nfig.to_json()"
+    }}
+  ]
+}}
+"""
+
+        # Call Gemini API
+        gemini_api_key = os.getenv("GEMINI_API_KEY")
+        if not gemini_api_key:
+            raise HTTPException(status_code=500, detail="Gemini API not configured. Please add GEMINI_API_KEY to your .env file")
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_api_key}",
+                json={
+                    "contents": [{
+                        "parts": [{
+                            "text": prompt
+                        }]
+                    }],
+                    "generationConfig": {
+                        "temperature": 0.5,
+                        "maxOutputTokens": 8192,
+                    }
+                }
+            )
+
+            if response.status_code != 200:
+                error_detail = response.text
+                print(f"Gemini API Error: {response.status_code} - {error_detail}")
+                raise HTTPException(status_code=500, detail=f"Gemini API error: {response.status_code}")
+
+            result = response.json()
+            
+            # Check if response has the expected structure
+            if "candidates" not in result or len(result["candidates"]) == 0:
+                print(f"Unexpected Gemini response structure: {result}")
+                raise HTTPException(status_code=500, detail="Unexpected response from Gemini API")
+            
+            # Handle different response structures
+            candidate = result["candidates"][0]
+            if "content" in candidate:
+                if "parts" in candidate["content"]:
+                    ai_response = candidate["content"]["parts"][0]["text"]
+                elif "text" in candidate["content"]:
+                    ai_response = candidate["content"]["text"]
+                else:
+                    print(f"Unexpected content structure: {candidate['content']}")
+                    raise HTTPException(status_code=500, detail="Unexpected content structure from Gemini API")
+            elif "text" in candidate:
+                ai_response = candidate["text"]
+            else:
+                print(f"Unexpected candidate structure: {candidate}")
+                raise HTTPException(status_code=500, detail="Unexpected candidate structure from Gemini API")
+            
+            # Clean up response (remove markdown code blocks if present)
+            ai_response = ai_response.strip()
+            if ai_response.startswith("```json"):
+                ai_response = ai_response[7:]
+            if ai_response.startswith("```"):
+                ai_response = ai_response[3:]
+            if ai_response.endswith("```"):
+                ai_response = ai_response[:-3]
+            ai_response = ai_response.strip()
+
+            # Parse AI response
+            try:
+                viz_data = json.loads(ai_response)
+            except json.JSONDecodeError as e:
+                print(f"Failed to parse AI response as JSON: {ai_response}")
+                raise HTTPException(status_code=500, detail=f"Invalid JSON from AI: {str(e)}")
+            
+            return VisualizationResponse(**viz_data)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Visualization generation error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Visualization generation error: {str(e)}")
+
+
+@app.post("/execute-visualization")
+async def execute_visualization(request: Dict[str, Any]):
+    """Execute Python visualization code and return Plotly JSON"""
+    try:
+        code = request.get("code", "")
+        data = request.get("data", [])
+
+        if not code:
+            raise HTTPException(status_code=400, detail="No code provided")
+
+        print(f"Executing visualization code:")
+        print(f"Data length: {len(data)}")
+        print(f"Code: {code[:200]}...")
+
+        # Create a safe execution environment
+        import plotly.express as px
+        import pandas as pd
+        import io
+        import sys
+        from contextlib import redirect_stdout, redirect_stderr
+
+        # Prepare the execution namespace
+        namespace = {
+            'px': px,
+            'pd': pd,
+            'data': data,
+            'json': json
+        }
+
+        # Capture output
+        stdout_capture = io.StringIO()
+        stderr_capture = io.StringIO()
+
+        try:
+            with redirect_stdout(stdout_capture), redirect_stderr(stderr_capture):
+                exec(code, namespace)
+            
+            # Get the figure from namespace (it should be assigned to 'fig')
+            if 'fig' in namespace:
+                fig = namespace['fig']
+                fig_json = fig.to_json()
+                print(f"Successfully generated chart")
+                return {"success": True, "data": json.loads(fig_json)}
+            else:
+                error_msg = f"No 'fig' variable found. Available variables: {list(namespace.keys())}"
+                print(error_msg)
+                raise Exception(error_msg)
+
+        except Exception as exec_error:
+            error_msg = stderr_capture.getvalue() or str(exec_error)
+            print(f"Execution error: {error_msg}")
+            print(f"Stdout: {stdout_capture.getvalue()}")
+            raise HTTPException(status_code=400, detail=f"Code execution error: {error_msg}")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Execution error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Execution error: {str(e)}")
 
 
 if __name__ == "__main__":

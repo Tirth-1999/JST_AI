@@ -3729,6 +3729,318 @@ kbd {
     }
 }
 
+/* Visualizations Tab Styles */
+.visualizations-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.viz-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.viz-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.btn-generate-viz {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.btn-generate-viz:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(124, 58, 237, 0.4);
+}
+
+.btn-generate-viz:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-generate-viz svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2.5;
+}
+
+.visualizations-grid {
+    flex: 1;
+    padding: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.viz-carousel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 0;
+}
+
+.viz-carousel-container {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.viz-carousel-slides {
+    flex: 1;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.viz-slide {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s ease, visibility 0.4s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.viz-slide.active {
+    opacity: 1;
+    visibility: visible;
+    z-index: 1;
+}
+
+.viz-carousel-dots {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    padding: 16px 0;
+    flex-shrink: 0;
+    z-index: 15;
+    pointer-events: none;
+}
+
+.viz-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--border-color);
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    padding: 0;
+    pointer-events: auto;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.viz-dot:hover {
+    background: var(--text-secondary);
+    transform: scale(1.2);
+}
+
+.viz-dot.active {
+    background: var(--accent-primary);
+    width: 32px;
+    border-radius: 6px;
+}
+
+.viz-placeholder {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 60px 20px;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.viz-placeholder svg {
+    opacity: 0.3;
+    stroke-width: 1.5;
+}
+
+.viz-placeholder p {
+    margin: 0;
+    max-width: 400px;
+    font-size: 14px;
+}
+
+.viz-card {
+    width: 100%;
+    max-width: 1200px;
+    height: 100%;
+    background: transparent;
+    perspective: 1000px;
+    display: flex;
+    flex-direction: column;
+}
+
+.viz-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
+    cursor: pointer;
+}
+
+.viz-card-inner.flipped {
+    transform: rotateY(180deg);
+}
+
+.viz-card-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+}
+
+.viz-card-front {
+    display: flex;
+    flex-direction: column;
+}
+
+.viz-card-back {
+    transform: rotateY(180deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+}
+
+.viz-info-content {
+    text-align: center;
+    max-width: 600px;
+    width: 100%;
+}
+
+.viz-info-title {
+    margin: 0 0 16px 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.viz-info-description {
+    margin: 0 0 24px 0;
+    font-size: 16px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.viz-flip-back-btn {
+    padding: 12px 24px;
+    background: var(--accent-primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.viz-flip-back-btn:hover {
+    background: var(--accent-hover);
+    transform: scale(1.05);
+}
+
+.viz-card-description.error {
+    color: #ef4444;
+}
+
+.viz-card-body {
+    flex: 1;
+    padding: 0;
+    background: var(--bg-primary);
+    min-height: 0;
+    overflow: hidden;
+}
+
+.viz-error {
+    border-color: #ef4444;
+}
+
+.viz-error-message {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.viz-error-message svg {
+    color: #ef4444;
+    stroke-width: 2;
+}
+
+.viz-error-message p {
+    margin: 0;
+    font-size: 14px;
+}
+
+/* Light theme adjustments */
+:root[data-theme="light"] .viz-card-back {
+    background: var(--bg-secondary);
+}
+
+:root[data-theme="light"] .viz-card-body {
+    color: #000000;
+}
+
+/* Force Plotly text to be black in light theme */
+:root[data-theme="light"] .viz-card-body text {
+    fill: #000000 !important;
+}
+
+:root[data-theme="light"] .viz-card-body .xtitle,
+:root[data-theme="light"] .viz-card-body .ytitle,
+:root[data-theme="light"] .viz-card-body .gtitle {
+    fill: #000000 !important;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .tabs-wrapper {
@@ -3895,5 +4207,50 @@ kbd {
     .chat-input-hint {
         font-size: 10px;
         margin-top: 6px;
+    }
+
+    .viz-title-overlay {
+        padding: 8px 12px;
+    }
+
+    .viz-info-content {
+        padding: 24px 20px;
+    }
+
+    .viz-info-title {
+        font-size: 20px;
+    }
+
+    .viz-info-description {
+        font-size: 13px;
+    }
+
+    .viz-header {
+        padding: 8px 12px;
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+    }
+
+    .btn-generate-viz {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .viz-carousel-dots {
+        position: relative;
+        bottom: auto;
+        padding: 12px 0;
+        background: var(--bg-secondary);
+        border-top: 1px solid var(--border-color);
+    }
+
+    .viz-dot {
+        width: 8px;
+        height: 8px;
+    }
+
+    .viz-dot.active {
+        width: 20px;
     }
 }
