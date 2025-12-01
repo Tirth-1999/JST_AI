@@ -56,7 +56,13 @@ A modern full-stack web application that converts JSON to TOON (Token Optimized 
 
 #### Sub-Tabs in AI Mode:
 1. **Lab**: Generate AI insights about your dataset with one click
-2. **Chat**: Interactive chat interface to ask questions about your data
+2. **Chat**: Interactive chat interface with **Enhanced RAG System**
+   - **Conversation History**: Maintains context across multiple messages
+   - **Deep Dataset Understanding**: AI has access to comprehensive dataset statistics
+   - **User Preference Learning**: Adapts response style based on your interaction patterns
+   - **Session Management**: Persistent conversations with automatic cleanup
+   - **Smart Context**: References previous questions and answers automatically
+   - **Detailed Documentation**: See [RAG_SYSTEM.md](./RAG_SYSTEM.md) for complete technical details
 3. **Visualizations**: AI-powered exploratory data analysis (EDA)
    - **Automatic Chart Generation**: AI recommends 4 appropriate visualizations
    - **Smart Analysis**: Gemini analyzes your dataset structure and generates optimal charts

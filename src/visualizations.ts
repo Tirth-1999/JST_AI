@@ -153,6 +153,12 @@ export class VisualizationManager {
         // Get the parent container
         const parentContainer = this.container.parentElement;
         
+        // Remove any existing dots wrapper before creating new one
+        const existingDotsWrapper = parentContainer?.querySelector('.viz-carousel-dots-wrapper');
+        if (existingDotsWrapper) {
+            existingDotsWrapper.remove();
+        }
+        
         this.container.innerHTML = `
             <div class="viz-carousel">
                 <div class="viz-carousel-container">

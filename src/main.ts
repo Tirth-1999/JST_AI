@@ -938,6 +938,11 @@ function handleClear(): void {
     tableViewContainer.style.display = 'none';
     editorWrapper.style.display = 'flex';
 
+    // Reset chat context
+    currentJsonData = null;
+    currentDataAnalyzer = null;
+    chatSessionId = null;
+
     // Reset mobile view
     resetMobileView();
 
@@ -1231,6 +1236,8 @@ downloadBtn.disabled = true;
 import { DataAnalyzer } from './dataAnalysis';
 
 let currentJsonData: any = null;
+let currentDataAnalyzer: DataAnalyzer | null = null;
+let chatSessionId: string | null = null; // Track conversation session
 
 // Tab switching
 const tabButtons = document.querySelectorAll('.tab-button');
@@ -1398,10 +1405,13 @@ analyzeBtn?.addEventListener('click', async () => {
         const data = JSON.parse(jsonInput.value);
         currentJsonData = data;
         
+        // Reset chat context when new data is loaded
+        currentDataAnalyzer = new DataAnalyzer(data);
+        chatSessionId = null; // Start new conversation session
+        
         // Analyze data
-        const analyzer = new DataAnalyzer(data);
-        analyzer.analyze();
-        const summary = analyzer.generateSummary();
+        currentDataAnalyzer.analyze();
+        const summary = currentDataAnalyzer.generateSummary();
         
         // Get insights from backend API
         const response = await fetch('http://localhost:8000/generate-insights', {
@@ -1508,19 +1518,19 @@ async function sendMessage() {
         chatInput.style.height = 'auto'; // Reset height after sending
         sendChatBtn.disabled = true;
 
-        // Prepare data context if not already set
-        let context = '';
-        if (!currentJsonData) {
+        // Prepare enhanced dataset statistics
+        if (!currentDataAnalyzer) {
             currentJsonData = JSON.parse(jsonInput.value);
-            const analyzer = new DataAnalyzer(currentJsonData);
-            analyzer.analyze();
-            context = analyzer.generateSummary();
+            currentDataAnalyzer = new DataAnalyzer(currentJsonData);
         }
+
+        // Get full statistics for better context
+        const fullStats = currentDataAnalyzer.exportFullStats();
 
         // Show loading with proper structure
         const loadingId = addChatMessage('ai', 'typing');
 
-        // Get AI response from backend
+        // Get AI response from backend with enhanced context
         const response = await fetch('http://localhost:8000/chat', {
             method: 'POST',
             headers: {
@@ -1528,7 +1538,8 @@ async function sendMessage() {
             },
             body: JSON.stringify({
                 message,
-                context: context || undefined
+                dataset_stats: fullStats,
+                session_id: chatSessionId
             })
         });
 
@@ -1537,6 +1548,11 @@ async function sendMessage() {
         }
 
         const result = await response.json();
+
+        // Store session ID for conversation continuity
+        if (result.session_id) {
+            chatSessionId = result.session_id;
+        }
 
         // Remove loading and add real response
         const loadingMsg = document.getElementById(loadingId);

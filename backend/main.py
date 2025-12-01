@@ -16,6 +16,15 @@ from database import engine, get_db
 import models
 from auth import oauth, create_access_token, get_current_user, get_or_create_user
 import re
+from conversation_manager import (
+    get_session, 
+    clear_session, 
+    cleanup_old_sessions,
+    RAGPromptBuilder,
+    DatasetContext,
+    _sessions
+)
+import uuid
 
 # Load environment variables
 load_dotenv()
@@ -89,10 +98,13 @@ class InsightsResponse(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     context: Optional[str] = None  # Data context/summary
+    session_id: Optional[str] = None  # Session ID for conversation history
+    dataset_stats: Optional[Dict[str, Any]] = None  # Full dataset statistics
 
 
 class ChatResponse(BaseModel):
     response: str
+    session_id: Optional[str] = None  # Return session ID for tracking
 
 
 class TxtParseRequest(BaseModel):
@@ -985,57 +997,45 @@ def clean_ai_response(text: str) -> str:
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
-    """Chat with AI about the data"""
+    """Enhanced chat with RAG, conversation history, and user preference learning"""
     try:
         gemini_api_key = os.getenv("GEMINI_API_KEY", "").strip()
         if not gemini_api_key:
             raise HTTPException(status_code=500, detail="Gemini API not configured")
 
-        # Build context-aware prompt with conversational instructions
-        if request.context:
-            prompt = f"""You're answering a colleague's quick question about their data. Be direct and conversational.
+        # Get or create session
+        session_id = request.session_id or str(uuid.uuid4())
+        session = get_session(session_id)
+        
+        conversation = session["conversation"]
+        preferences = session["preferences"]
+        dataset_context = session["dataset_context"]
+        
+        # Update user preferences from message
+        preferences.update_from_message(request.message)
+        
+        # Update dataset context if new stats provided
+        if request.dataset_stats:
+            dataset_context.update_from_data(
+                request.dataset_stats.get("raw_data", []),
+                request.dataset_stats
+            )
+        elif request.context:
+            # Fallback to old context format
+            dataset_context.summary = request.context
+        
+        # Add user message to history
+        conversation.add_message("user", request.message)
+        
+        # Build enhanced RAG prompt
+        prompt = RAGPromptBuilder.build_chat_prompt(
+            user_message=request.message,
+            dataset_context=dataset_context,
+            conversation_history=conversation,
+            user_preferences=preferences
+        )
 
-Data: {request.context}
-
-Question: {request.message}
-
-FORBIDDEN - DO NOT INCLUDE:
-❌ "### " or "## " headers of ANY kind
-❌ "---" horizontal lines
-❌ Numbered steps like "1. Calculate" or "2. Visualize"
-❌ Code examples in R or Python (they already have the data)
-❌ Tutorial instructions like "Load the data" or "Install packages"
-❌ Phrases: "Let's", "We can", "We'll use", "You will get"
-❌ Section labels: "Conclusion", "Result", "Interpretation", "Using X"
-❌ Meta-talk about what you're going to explain
-❌ "I hope this helps" or similar closings
-
-REQUIRED - YOU MUST:
-✓ Start immediately with the direct answer
-✓ State the key finding in the first sentence
-✓ If showing math, do it inline: "The average is 42 (sum 420 / count 10)"
-✓ Maximum 3-4 short sentences unless calculation needed
-✓ Sound like a human, not a textbook
-✓ Skip obvious context the user already knows
-
-Example of GOOD answer:
-"The correlation is -0.85, which is strong and negative. Cars with more cylinders get worse MPG - about 26 MPG for 4-cylinder vs 15 MPG for 8-cylinder in your data."
-
-Example of BAD answer (DO NOT DO THIS):
-"### Correlation Analysis
-Let's explore the relationship...
-1. Calculate correlation: -0.85
-2. Interpretation: This shows..."
-
-Your concise answer:"""
-        else:
-            prompt = f"""Answer this directly in 2-3 sentences max:
-
-{request.message}
-
-No headers, code, or tutorials. Just the answer."""
-
-        # Retry logic
+        # Retry logic with enhanced error handling
         max_retries = 5
         last_error = None
 
@@ -1051,9 +1051,9 @@ No headers, code, or tutorials. Just the answer."""
                                 }]
                             }],
                             "generationConfig": {
-                                "temperature": 0.8,  # Higher for more natural conversation
+                                "temperature": 0.7,  # Balanced for accuracy and naturalness
                                 "maxOutputTokens": 4096,
-                                "topP": 0.95,
+                                "topP": 0.9,
                                 "topK": 40,
                             },
                             "safetySettings": [
@@ -1079,7 +1079,6 @@ No headers, code, or tutorials. Just the answer."""
 
                     if response.status_code == 429:  # Rate limit
                         if attempt < max_retries - 1:
-                            import asyncio
                             await asyncio.sleep(2 ** attempt)
                             continue
                         raise HTTPException(status_code=429, detail="Rate limit exceeded. Please try again.")
@@ -1115,21 +1114,26 @@ No headers, code, or tutorials. Just the answer."""
 
                     # Clean up AI-generated formatting artifacts
                     cleaned_response = clean_ai_response(response_text)
+                    
+                    # Add assistant response to history
+                    conversation.add_message("assistant", cleaned_response)
+                    
+                    # Cleanup old sessions periodically
+                    if len(_sessions) > 100:
+                        cleanup_old_sessions(max_age_hours=24)
 
-                    return ChatResponse(response=cleaned_response)
+                    return ChatResponse(response=cleaned_response, session_id=session_id)
 
             except HTTPException:
                 raise
             except httpx.TimeoutException:
                 last_error = "Request timeout"
                 if attempt < max_retries - 1:
-                    import asyncio
                     await asyncio.sleep(1)
                     continue
             except Exception as e:
                 last_error = str(e)
                 if attempt < max_retries - 1:
-                    import asyncio
                     await asyncio.sleep(1)
                     continue
                 raise
@@ -1143,6 +1147,38 @@ No headers, code, or tutorials. Just the answer."""
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
+
+
+class ClearSessionRequest(BaseModel):
+    session_id: str
+
+
+@app.post("/clear-session")
+async def clear_chat_session(request: ClearSessionRequest):
+    """Clear a chat session to start fresh conversation"""
+    try:
+        clear_session(request.session_id)
+        return {"success": True, "message": "Session cleared successfully"}
+    except Exception as e:
+        return {"success": False, "message": f"Failed to clear session: {str(e)}"}
+
+
+@app.get("/session-info/{session_id}")
+async def get_session_info(session_id: str):
+    """Get information about a chat session"""
+    try:
+        session = get_session(session_id)
+        conversation = session["conversation"]
+        preferences = session["preferences"]
+        
+        return {
+            "session_id": session_id,
+            "message_count": len(conversation.get_all_messages()),
+            "preferences": preferences.preferences,
+            "session_start": session["created_at"].isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Session not found: {str(e)}")
 
 
 @app.post("/detect-txt-delimiter", response_model=DelimiterInfo)

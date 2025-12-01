@@ -226,4 +226,13 @@ export class DataAnalyzer {
 
         return summary;
     }
+
+    // Export full statistics for enhanced AI context
+    exportFullStats(): any {
+        const stats = this.analyze();
+        return {
+            ...stats,
+            raw_data: this.data.slice(0, 5) // Include first 5 rows as samples
+        };
+    }
 }
